@@ -1,20 +1,20 @@
 cmake_minimum_required( VERSION 3.20 )
 
-project( CustomFramework LANGUAGES CXX )
+project( UnlinkedFramework LANGUAGES CXX )
 
 set( CMAKE_CXX_STANDARD 20 )
 set( CMAKE_CXX_STANDARD_REQUIRED ON )
 set( CMAKE_CXX_EXTENSIONS OFF )
 
 if( NOT WIN32 )
-    message( FATAL_ERROR "Custom Framework builds on Windows." )
+    message( FATAL_ERROR "Unlinked UI Framework builds exclusively on Windows." )
 endif( )
 
 option( UR_DIRECTX11 "DirectX 11 backend" ON )
 option( UR_DIRECTX12 "DirectX 12 backend" ON )
 option( UR_OPENGL "OpenGL backend" ON )
 option( UR_VULKAN "Vulkan backend" OFF )
-option( UR_BUILD_DEMO "Build hello and showcase" ON )
+option( UR_BUILD_DEMO "Build hello and showcase demos" ON )
 option( UR_DISCORD "Discord Rich Presence" ON )
 option( UR_SPOTIFY_API "Spotify Web API path" ON )
 
@@ -81,6 +81,7 @@ endif( )
 
 add_library( ur STATIC ${UrSources} )
 add_library( UR::UR ALIAS ur )
+add_library( Unlinked::Framework ALIAS ur )
 
 set( UrIncludes
     ${CMAKE_CURRENT_SOURCE_DIR}/include

@@ -1,6 +1,6 @@
-# Getting Started with Custom Framework (UR)
+# Getting Started with Unlinked Framework (UR)
 
-**Custom Framework** is a lightweight, immediate-mode C++ GUI and rendering library tailored for Windows. It provides multi-backend graphics rendering (Direct3D 11, Direct3D 12, OpenGL, and Vulkan) with a single, unified API.
+**Unlinked Framework** is a lightweight, immediate-mode C++ GUI and rendering library tailored for Windows. It provides multi-backend graphics rendering (Direct3D 11, Direct3D 12, OpenGL, and Vulkan) with a single, unified API.
 
 ---
 
@@ -13,11 +13,11 @@ Include the umbrella header `<ur/ur.hpp>` and initialize the run loop with `ur::
 
 int WINAPI WinMain( HINSTANCE, HINSTANCE, LPSTR, int ) {
     ur::app::Config Config;
-    Config.title = "Hello App";
+    Config.title = "Unlinked App";
     
     return ur::app::run( Config, [ ] {
         if ( ur::ui::window Window( "Hello Window" ); Window ) {
-            ur::ui::heading( "Custom Framework" );
+            ur::ui::heading( "Unlinked Framework" );
             
             if ( ur::ui::button( "Click Me" ) ) {
                 ur::ui::notice( "Button was clicked!" );
@@ -117,7 +117,7 @@ Themes define colors, control roundings, drop shadows, and font scalings:
 ur::theme::apply( 2 ); // Apply built-in preset
 Style->Accent = CColor( 74, 124, 255 );
 Style->Rounding = 12.0f;
-ur::theme::load_file( "assets/themes/custom.theme" );
+ur::theme::load_file( "assets/themes/unlinked.theme" );
 ```
 
 ---

@@ -529,8 +529,8 @@ static void Showcase( ) {
     Frames->End( );
 
     if ( AboutOpen && Widgets->BeginModal( "About", &AboutOpen, CVector( 380.0f, 200.0f ) ) ) {
-        Widgets->Heading( "Custom Framework" );
-        Widgets->Wrapped( "Immediate-mode UI for Windows on Direct3D 11, Direct3D 12, and OpenGL. Ctrl+K opens the command palette. Ctrl+S saves the layout." );
+        Widgets->Heading( "Unlinked Framework" );
+        Widgets->Wrapped( "Immediate-mode UI for Windows on Direct3D 11, Direct3D 12, OpenGL, and Vulkan. Ctrl+K opens the command palette. Ctrl+S saves the layout." );
         if ( Widgets->Button( "Close" ) )
             AboutOpen = false;
         Widgets->EndModal( );
@@ -543,7 +543,7 @@ static void Showcase( ) {
 
 int WINAPI WinMain( HINSTANCE, HINSTANCE, LPSTR CommandLine, int ) {
     ur::app::Config Config;
-    Config.title = "Custom Framework";
+    Config.title = "Unlinked Framework Showcase";
     Config.width = 1480;
     Config.height = 860;
     Config.media = true;
@@ -551,8 +551,8 @@ int WINAPI WinMain( HINSTANCE, HINSTANCE, LPSTR CommandLine, int ) {
     Config.discord = true;
     Config.overlay = true;
     Config.persist = true;
-    Config.layout = "ur.layout";
-    Config.settings = "ur.settings";
+    Config.layout = "unlinked.layout";
+    Config.settings = "unlinked.settings";
 
     if ( CommandLine && CommandLine[ 0 ] ) {
         int Index = atoi( CommandLine );

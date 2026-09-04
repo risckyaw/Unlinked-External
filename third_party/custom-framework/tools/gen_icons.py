@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+"""
+Unlinked UI Framework - Icon Header Generator
+Parses Font Awesome CSS and generates C++ enum definitions in include/ur/icons.hpp.
+"""
 
 from __future__ import annotations
 

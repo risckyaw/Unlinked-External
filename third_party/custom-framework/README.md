@@ -1,6 +1,6 @@
-# Custom Framework (UR)
+# Unlinked Framework (UR)
 
-A high-performance, immediate-mode C++ UI framework designed for Windows desktop applications and overlays. It provides a modern declarative API, multi-backend hardware rendering (Direct3D 11, Direct3D 12, OpenGL, Vulkan), built-in animation systems, custom styling, and audio/media studio integrations.
+A high-performance, immediate-mode C++ UI framework designed for Windows desktop applications and game overlays. It provides a modern declarative API, multi-backend hardware rendering (Direct3D 11, Direct3D 12, OpenGL, Vulkan), built-in animation systems, custom styling, and audio/media studio integrations.
 
 ![Showcase](docs/preview.png)
 
@@ -41,14 +41,14 @@ The framework manages the Win32 window lifetime, DPI awareness, swapchain resizi
 
 int WINAPI WinMain( HINSTANCE, HINSTANCE, LPSTR, int ) {
     ur::app::Config Config;
-    Config.title = "Application";
+    Config.title = "Unlinked Application";
     Config.backend = ur::Backend::DX11;
     Config.width = 1280;
     Config.height = 720;
 
     return ur::app::run( Config, [ ] {
         if ( ur::ui::window Window( "Main Window" ); Window ) {
-            ur::ui::heading( "Custom Framework" );
+            ur::ui::heading( "Unlinked Framework" );
             ur::ui::label( "Direct3D 11, Direct3D 12, OpenGL, or Vulkan." );
 
             static float Volume = 0.75f;

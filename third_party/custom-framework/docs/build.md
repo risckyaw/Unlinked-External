@@ -1,4 +1,4 @@
-# Building Custom Framework (UR)
+# Building Unlinked Framework (UR)
 
 This document provides instructions for compiling the framework library, demos, and integrating with external applications.
 

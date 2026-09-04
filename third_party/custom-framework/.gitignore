@@ -1,3 +1,4 @@
+# Build Outputs & Temporary Artifacts
 /build/
 /out/
 /.vs/
@@ -6,6 +7,7 @@
 /cmake-build-*/
 /CMakeUserPresets.json
 
+# MSVC & Compiler Files
 *.user
 *.suo
 *.sdf
@@ -16,6 +18,7 @@
 *.ilk
 *.exp
 
+# Local Environment & Secrets
 .env
 .env.local
 *.pem
@@ -25,15 +28,21 @@
 token.json
 spotify.json
 discord.json
+
+# Unlinked Framework Layout & Persistent Settings
+unlinked.layout
+unlinked.settings
 ur.layout
 ur.settings
 
+# Font Assets (when generated dynamically)
 *.woff
 *.woff2
 *.ttf
 *.otf
 *.eot
 
+# OS & System Artifacts
 Thumbs.db
 Desktop.ini
 .DS_Store
