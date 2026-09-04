@@ -14,7 +14,6 @@ option( UR_DIRECTX11 "DirectX 11 backend" ON )
 option( UR_DIRECTX12 "DirectX 12 backend" ON )
 option( UR_OPENGL "OpenGL backend" ON )
 option( UR_VULKAN "Vulkan backend" OFF )
-option( UR_BUILD_DEMO "Build hello and showcase demos" ON )
 option( UR_DISCORD "Discord Rich Presence" ON )
 option( UR_SPOTIFY_API "Spotify Web API path" ON )
 
@@ -162,10 +161,3 @@ function( ur_add_app Target )
     )
 endfunction( )
 
-if( UR_BUILD_DEMO )
-    ur_add_app( ur_showcase demos/showcase/Main.cpp )
-    set_target_properties( ur_showcase PROPERTIES OUTPUT_NAME Showcase )
-
-    ur_add_app( ur_hello demos/hello/Main.cpp )
-    set_target_properties( ur_hello PROPERTIES OUTPUT_NAME Hello )
-endif( )
