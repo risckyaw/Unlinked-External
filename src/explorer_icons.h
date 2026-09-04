@@ -1,4 +1,21 @@
 #pragma once
+
+/**
+ * @file explorer_icons.h
+ * @brief Unlinked External - Embedded PNG icon data for the DataModel instance explorer.
+ *
+ * Contains 24-bit RGBA PNG pixel data stored as inline byte arrays for each
+ * Roblox DataModel class type: Workspace, Model, Folder, Script, Player, GUI, etc.
+ * These are decoded at runtime by the explorer renderer to draw per-class icons
+ * in the live instance tree panel.
+ *
+ * Namespace: ExplorerIcons
+ * Icons: workspace, part, model, folder, camera, humanoid, local_script, players,
+ *        script, sound, accessory, hat, module_script, player, replicated_storage,
+ *        spawn_location, run_service, replicated_first, gui_service, stats,
+ *        starter_gui, starter_pack, starter_player, chat, core_gui
+ */
+
 #include <vector>
 #include <cstdint>
 
