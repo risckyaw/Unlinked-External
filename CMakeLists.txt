@@ -48,8 +48,8 @@ add_custom_command( TARGET Unlinked POST_BUILD
         "${FONT_DIR}/fa-regular-400.woff2"
         "$<TARGET_FILE_DIR:Unlinked>/assets/icons/fontawesome/fa-regular-400.woff2"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${FONT_DIR}/fa-light-300.woff2"
-        "$<TARGET_FILE_DIR:Unlinked>/assets/icons/fontawesome/fa-light-300.woff2"
+        "${FONT_DIR}/fa-brands-400.woff2"
+        "$<TARGET_FILE_DIR:Unlinked>/assets/icons/fontawesome/fa-brands-400.woff2"
     COMMAND ${CMAKE_COMMAND} -E make_directory
         "$<TARGET_FILE_DIR:Unlinked>/assets/fonts"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different

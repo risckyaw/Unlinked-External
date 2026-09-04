@@ -33,7 +33,7 @@ This directory contains the custom typography suites and icon glyph assets for *
 
 ---
 
-## 2. Icon Glyphs (Font Awesome)
-- `fa-light-300.woff2` — Thin-line iconography
-- `fa-regular-400.woff2` — Regular UI icons
+## 2. Icon Glyphs (Font Awesome 6 Free)
 - `fa-solid-900.woff2` — High-contrast solid icon markers
+- `fa-regular-400.woff2` — Regular UI outline icons
+- `fa-brands-400.woff2` — Brand icons and platform markers
