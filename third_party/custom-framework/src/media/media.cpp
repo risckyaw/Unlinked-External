@@ -1,3 +1,10 @@
+/**
+ * @file media.cpp
+ * @brief Unlinked UI Framework (UR) - media/media.cpp
+ * 
+ * Part of the Unlinked immediate-mode graphics and user interface framework.
+ */
+
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #define _CRT_SECURE_NO_WARNINGS

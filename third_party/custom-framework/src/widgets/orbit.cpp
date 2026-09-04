@@ -1,3 +1,10 @@
+/**
+ * @file orbit.cpp
+ * @brief Unlinked UI Framework (UR) - widgets/orbit.cpp
+ * 
+ * Part of the Unlinked immediate-mode graphics and user interface framework.
+ */
+
 #include "ur/orbit.hpp"
 #include "ur/hear.hpp"
 

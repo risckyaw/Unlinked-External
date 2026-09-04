@@ -1,5 +1,12 @@
 #pragma once
 
+/**
+ * @file Canvas.h
+ * @brief Unlinked UI Framework (UR) - engine/Ports/Canvas/Canvas.h
+ * 
+ * Part of the Unlinked immediate-mode graphics and user interface framework.
+ */
+
 #include <memory>
 #include <vector>
 

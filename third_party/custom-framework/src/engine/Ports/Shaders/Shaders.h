@@ -1,5 +1,12 @@
 #pragma once
 
+/**
+ * @file Shaders.h
+ * @brief Unlinked UI Framework (UR) - engine/Ports/Shaders/Shaders.h
+ * 
+ * Part of the Unlinked immediate-mode graphics and user interface framework.
+ */
+
 #include <memory>
 #include <string>
 #include <vector>

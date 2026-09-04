@@ -1,3 +1,10 @@
+/**
+ * @file desk.cpp
+ * @brief Unlinked UI Framework (UR) - widgets/desk.cpp
+ * 
+ * Part of the Unlinked immediate-mode graphics and user interface framework.
+ */
+
 #include "ur/desk.hpp"
 #include "ur/hear.hpp"
 

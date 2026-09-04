@@ -1,3 +1,10 @@
+/**
+ * @file app.cpp
+ * @brief Unlinked UI Framework (UR) - app/app.cpp
+ * 
+ * Part of the Unlinked immediate-mode graphics and user interface framework.
+ */
+
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 

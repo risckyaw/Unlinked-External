@@ -1,3 +1,10 @@
+/**
+ * @file Style.cpp
+ * @brief Unlinked UI Framework (UR) - engine/Interface/Style/Style.cpp
+ * 
+ * Part of the Unlinked immediate-mode graphics and user interface framework.
+ */
+
 #include "Style.h"
 
 void CStyle::Dark( ) {

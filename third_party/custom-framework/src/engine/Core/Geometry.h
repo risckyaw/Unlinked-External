@@ -1,5 +1,12 @@
 #pragma once
 
+/**
+ * @file Geometry.h
+ * @brief Unlinked UI Framework (UR) - engine/Core/Geometry.h
+ * 
+ * Part of the Unlinked immediate-mode graphics and user interface framework.
+ */
+
 class CVector {
 public:
     CVector( ) = default;

@@ -1,3 +1,10 @@
+/**
+ * @file Arena.cpp
+ * @brief Unlinked UI Framework (UR) - engine/Core/Arena/Arena.cpp
+ * 
+ * Part of the Unlinked immediate-mode graphics and user interface framework.
+ */
+
 #include "Arena.h"
 
 bool CArena::Create( size_t Capacity ) {

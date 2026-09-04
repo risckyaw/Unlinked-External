@@ -1,3 +1,10 @@
+/**
+ * @file Canvas.cpp
+ * @brief Unlinked UI Framework (UR) - engine/Ports/Canvas/Canvas.cpp
+ * 
+ * Part of the Unlinked immediate-mode graphics and user interface framework.
+ */
+
 #include "Font.h"
 #include "Sheet.h"
 #include "Canvas.h"

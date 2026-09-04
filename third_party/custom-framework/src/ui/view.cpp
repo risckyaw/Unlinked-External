@@ -1,3 +1,10 @@
+/**
+ * @file view.cpp
+ * @brief Unlinked UI Framework (UR) - ui/view.cpp
+ * 
+ * Part of the Unlinked immediate-mode graphics and user interface framework.
+ */
+
 #include "ur/view.hpp"
 
 #include "Context.h"

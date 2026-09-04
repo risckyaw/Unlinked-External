@@ -1,3 +1,10 @@
+/**
+ * @file image.cpp
+ * @brief Unlinked UI Framework (UR) - ui/image.cpp
+ * 
+ * Part of the Unlinked immediate-mode graphics and user interface framework.
+ */
+
 #include "ur/image.hpp"
 
 #include "Pictures.h"

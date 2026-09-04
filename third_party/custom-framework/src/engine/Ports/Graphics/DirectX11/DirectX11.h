@@ -1,5 +1,12 @@
 #pragma once
 
+/**
+ * @file DirectX11.h
+ * @brief Unlinked UI Framework (UR) - engine/Ports/Graphics/DirectX11/DirectX11.h
+ * 
+ * Part of the Unlinked immediate-mode graphics and user interface framework.
+ */
+
 #include <memory>
 #include <vector>
 #include <unordered_map>

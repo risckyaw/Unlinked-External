@@ -1,5 +1,12 @@
 #pragma once
 
+/**
+ * @file OpenGLHost.h
+ * @brief Unlinked UI Framework (UR) - host/OpenGLHost.h
+ * 
+ * Part of the Unlinked immediate-mode graphics and user interface framework.
+ */
+
 #include <memory>
 
 #include "Hosts.h"

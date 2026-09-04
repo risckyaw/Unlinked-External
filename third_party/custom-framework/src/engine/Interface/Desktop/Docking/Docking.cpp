@@ -1,3 +1,10 @@
+/**
+ * @file Docking.cpp
+ * @brief Unlinked UI Framework (UR) - engine/Interface/Desktop/Docking/Docking.cpp
+ * 
+ * Part of the Unlinked immediate-mode graphics and user interface framework.
+ */
+
 #include <cmath>
 #include <string>
 #include <istream>

@@ -1,3 +1,10 @@
+/**
+ * @file toast.cpp
+ * @brief Unlinked UI Framework (UR) - ui/toast.cpp
+ * 
+ * Part of the Unlinked immediate-mode graphics and user interface framework.
+ */
+
 #include "ur/toast.hpp"
 
 #include "Canvas.h"

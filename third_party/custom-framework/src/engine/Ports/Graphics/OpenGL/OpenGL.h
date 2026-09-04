@@ -1,5 +1,12 @@
 #pragma once
 
+/**
+ * @file OpenGL.h
+ * @brief Unlinked UI Framework (UR) - engine/Ports/Graphics/OpenGL/OpenGL.h
+ * 
+ * Part of the Unlinked immediate-mode graphics and user interface framework.
+ */
+
 #include <memory>
 #include <vector>
 #include <unordered_map>

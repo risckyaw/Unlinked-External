@@ -1,3 +1,10 @@
+/**
+ * @file bind.cpp
+ * @brief Unlinked UI Framework (UR) - ui/bind.cpp
+ * 
+ * Part of the Unlinked immediate-mode graphics and user interface framework.
+ */
+
 #include "ur/keys.hpp"
 
 #include "Input.h"

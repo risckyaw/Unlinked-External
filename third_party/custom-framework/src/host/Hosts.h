@@ -1,5 +1,12 @@
 #pragma once
 
+/**
+ * @file Hosts.h
+ * @brief Unlinked UI Framework (UR) - host/Hosts.h
+ * 
+ * Part of the Unlinked immediate-mode graphics and user interface framework.
+ */
+
 #include "Engine.h"
 
 class CHost {

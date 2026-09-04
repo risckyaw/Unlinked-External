@@ -1,3 +1,10 @@
+/**
+ * @file debug.cpp
+ * @brief Unlinked UI Framework (UR) - ui/debug.cpp
+ * 
+ * Part of the Unlinked immediate-mode graphics and user interface framework.
+ */
+
 #include "ur/debug.hpp"
 
 #include "Context.h"

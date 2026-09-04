@@ -1,3 +1,10 @@
+/**
+ * @file hear.cpp
+ * @brief Unlinked UI Framework (UR) - audio/hear.cpp
+ * 
+ * Part of the Unlinked immediate-mode graphics and user interface framework.
+ */
+
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 

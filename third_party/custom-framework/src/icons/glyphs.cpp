@@ -1,3 +1,10 @@
+/**
+ * @file glyphs.cpp
+ * @brief Unlinked UI Framework (UR) - icons/glyphs.cpp
+ * 
+ * Part of the Unlinked immediate-mode graphics and user interface framework.
+ */
+
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 

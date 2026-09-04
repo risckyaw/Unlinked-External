@@ -1,5 +1,12 @@
 #pragma once
 
+/**
+ * @file Native.h
+ * @brief Unlinked UI Framework (UR) - engine/Ports/Platform/Native/Native.h
+ * 
+ * Part of the Unlinked immediate-mode graphics and user interface framework.
+ */
+
 #include <memory>
 #include <string>
 

@@ -1,3 +1,10 @@
+/**
+ * @file Frames.cpp
+ * @brief Unlinked UI Framework (UR) - engine/Interface/Desktop/Frames/Frames.cpp
+ * 
+ * Part of the Unlinked immediate-mode graphics and user interface framework.
+ */
+
 #include <cmath>
 #include <string>
 #include <istream>

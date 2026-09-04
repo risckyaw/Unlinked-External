@@ -1,3 +1,10 @@
+/**
+ * @file Context.cpp
+ * @brief Unlinked UI Framework (UR) - engine/Core/Context/Context.cpp
+ * 
+ * Part of the Unlinked immediate-mode graphics and user interface framework.
+ */
+
 #include "Arena.h"
 #include "Context.h"
 

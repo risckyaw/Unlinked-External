@@ -1,3 +1,10 @@
+/**
+ * @file DirectX12.cpp
+ * @brief Unlinked UI Framework (UR) - engine/Ports/Graphics/DirectX12/DirectX12.cpp
+ * 
+ * Part of the Unlinked immediate-mode graphics and user interface framework.
+ */
+
 #include <d3d12.h>
 #include <cstring>
 #include <d3dcompiler.h>

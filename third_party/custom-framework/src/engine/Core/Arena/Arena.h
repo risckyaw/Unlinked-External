@@ -1,5 +1,12 @@
 #pragma once
 
+/**
+ * @file Arena.h
+ * @brief Unlinked UI Framework (UR) - engine/Core/Arena/Arena.h
+ * 
+ * Part of the Unlinked immediate-mode graphics and user interface framework.
+ */
+
 #include <memory>
 #include <vector>
 

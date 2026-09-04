@@ -1,5 +1,12 @@
 #pragma once
 
+/**
+ * @file Docking.h
+ * @brief Unlinked UI Framework (UR) - engine/Interface/Desktop/Docking/Docking.h
+ * 
+ * Part of the Unlinked immediate-mode graphics and user interface framework.
+ */
+
 #include <iosfwd>
 #include <memory>
 #include <vector>

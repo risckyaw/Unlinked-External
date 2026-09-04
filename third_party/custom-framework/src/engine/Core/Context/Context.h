@@ -1,5 +1,12 @@
 #pragma once
 
+/**
+ * @file Context.h
+ * @brief Unlinked UI Framework (UR) - engine/Core/Context/Context.h
+ * 
+ * Part of the Unlinked immediate-mode graphics and user interface framework.
+ */
+
 #include <chrono>
 #include <memory>
 #include <string>

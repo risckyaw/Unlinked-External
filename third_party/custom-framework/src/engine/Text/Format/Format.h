@@ -1,5 +1,12 @@
 #pragma once
 
+/**
+ * @file Format.h
+ * @brief Unlinked UI Framework (UR) - engine/Text/Format/Format.h
+ * 
+ * Part of the Unlinked immediate-mode graphics and user interface framework.
+ */
+
 #include <memory>
 
 inline unsigned int DecodeCharacter( const char*& Cursor ) {

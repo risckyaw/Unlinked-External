@@ -1,3 +1,10 @@
+/**
+ * @file Shaders.cpp
+ * @brief Unlinked UI Framework (UR) - engine/Ports/Shaders/Shaders.cpp
+ * 
+ * Part of the Unlinked immediate-mode graphics and user interface framework.
+ */
+
 #include "Shaders.h"
 
 static const char* const HlslVertex = R"(

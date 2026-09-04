@@ -1,3 +1,10 @@
+/**
+ * @file player.cpp
+ * @brief Unlinked UI Framework (UR) - widgets/player.cpp
+ * 
+ * Part of the Unlinked immediate-mode graphics and user interface framework.
+ */
+
 #include "ur/player.hpp"
 #include "ur/glyphs.hpp"
 #include "ur/hear.hpp"

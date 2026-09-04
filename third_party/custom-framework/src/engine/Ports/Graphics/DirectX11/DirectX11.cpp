@@ -1,3 +1,10 @@
+/**
+ * @file DirectX11.cpp
+ * @brief Unlinked UI Framework (UR) - engine/Ports/Graphics/DirectX11/DirectX11.cpp
+ * 
+ * Part of the Unlinked immediate-mode graphics and user interface framework.
+ */
+
 #include <d3d11.h>
 #include <cstring>
 #include <d3dcompiler.h>

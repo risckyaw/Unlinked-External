@@ -1,3 +1,10 @@
+/**
+ * @file Input.cpp
+ * @brief Unlinked UI Framework (UR) - engine/Core/Input/Input.cpp
+ * 
+ * Part of the Unlinked immediate-mode graphics and user interface framework.
+ */
+
 #include "Input.h"
 
 void CInput::Settle( ) {

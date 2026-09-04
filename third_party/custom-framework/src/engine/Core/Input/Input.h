@@ -1,5 +1,12 @@
 #pragma once
 
+/**
+ * @file Input.h
+ * @brief Unlinked UI Framework (UR) - engine/Core/Input/Input.h
+ * 
+ * Part of the Unlinked immediate-mode graphics and user interface framework.
+ */
+
 #include <memory>
 #include <vector>
 

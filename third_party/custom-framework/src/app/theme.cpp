@@ -1,3 +1,10 @@
+/**
+ * @file theme.cpp
+ * @brief Unlinked UI Framework (UR) - app/theme.cpp
+ * 
+ * Part of the Unlinked immediate-mode graphics and user interface framework.
+ */
+
 #define _CRT_SECURE_NO_WARNINGS
 
 #include "ur/theme.hpp"

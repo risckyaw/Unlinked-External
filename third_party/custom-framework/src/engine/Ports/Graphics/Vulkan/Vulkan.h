@@ -1,5 +1,12 @@
 #pragma once
 
+/**
+ * @file Vulkan.h
+ * @brief Unlinked UI Framework (UR) - engine/Ports/Graphics/Vulkan/Vulkan.h
+ * 
+ * Part of the Unlinked immediate-mode graphics and user interface framework.
+ */
+
 #ifndef UR_VULKAN
 #define UR_VULKAN 0
 #endif

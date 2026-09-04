@@ -1,5 +1,12 @@
 #pragma once
 
+/**
+ * @file VulkanHost.h
+ * @brief Unlinked UI Framework (UR) - host/VulkanHost.h
+ * 
+ * Part of the Unlinked immediate-mode graphics and user interface framework.
+ */
+
 #include <memory>
 #include <vector>
 

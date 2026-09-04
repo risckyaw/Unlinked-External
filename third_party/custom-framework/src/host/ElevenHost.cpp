@@ -1,3 +1,10 @@
+/**
+ * @file ElevenHost.cpp
+ * @brief Unlinked UI Framework (UR) - host/ElevenHost.cpp
+ * 
+ * Part of the Unlinked immediate-mode graphics and user interface framework.
+ */
+
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 

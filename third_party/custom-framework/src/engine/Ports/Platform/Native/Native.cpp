@@ -1,3 +1,10 @@
+/**
+ * @file Native.cpp
+ * @brief Unlinked UI Framework (UR) - engine/Ports/Platform/Native/Native.cpp
+ * 
+ * Part of the Unlinked immediate-mode graphics and user interface framework.
+ */
+
 #if defined( _WIN32 )
 
 #define WIN32_LEAN_AND_MEAN

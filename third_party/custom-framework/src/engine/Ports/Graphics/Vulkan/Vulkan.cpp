@@ -1,3 +1,10 @@
+/**
+ * @file Vulkan.cpp
+ * @brief Unlinked UI Framework (UR) - engine/Ports/Graphics/Vulkan/Vulkan.cpp
+ * 
+ * Part of the Unlinked immediate-mode graphics and user interface framework.
+ */
+
 #include "Vulkan.h"
 
 #if UR_VULKAN

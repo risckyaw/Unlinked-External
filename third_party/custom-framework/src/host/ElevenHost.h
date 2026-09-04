@@ -1,5 +1,12 @@
 #pragma once
 
+/**
+ * @file ElevenHost.h
+ * @brief Unlinked UI Framework (UR) - host/ElevenHost.h
+ * 
+ * Part of the Unlinked immediate-mode graphics and user interface framework.
+ */
+
 #include <memory>
 
 #include "Hosts.h"

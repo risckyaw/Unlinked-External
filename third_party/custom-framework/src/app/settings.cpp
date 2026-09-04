@@ -1,3 +1,10 @@
+/**
+ * @file settings.cpp
+ * @brief Unlinked UI Framework (UR) - app/settings.cpp
+ * 
+ * Part of the Unlinked immediate-mode graphics and user interface framework.
+ */
+
 #include "ur/settings.hpp"
 
 #include <cstdlib>

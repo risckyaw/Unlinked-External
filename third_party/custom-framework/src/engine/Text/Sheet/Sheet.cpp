@@ -1,3 +1,10 @@
+/**
+ * @file Sheet.cpp
+ * @brief Unlinked UI Framework (UR) - engine/Text/Sheet/Sheet.cpp
+ * 
+ * Part of the Unlinked immediate-mode graphics and user interface framework.
+ */
+
 #include "Sheet.h"
 
 static constexpr int SheetWidth = 1024;

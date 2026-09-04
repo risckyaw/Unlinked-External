@@ -1,3 +1,10 @@
+/**
+ * @file Format.cpp
+ * @brief Unlinked UI Framework (UR) - engine/Text/Format/Format.cpp
+ * 
+ * Part of the Unlinked immediate-mode graphics and user interface framework.
+ */
+
 #include <cstdarg>
 #include <cstdio>
 

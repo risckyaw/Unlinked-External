@@ -1,5 +1,12 @@
 #pragma once
 
+/**
+ * @file Frames.h
+ * @brief Unlinked UI Framework (UR) - engine/Interface/Desktop/Frames/Frames.h
+ * 
+ * Part of the Unlinked immediate-mode graphics and user interface framework.
+ */
+
 #include <iosfwd>
 #include <memory>
 #include <vector>

@@ -1,3 +1,10 @@
+/**
+ * @file palette.cpp
+ * @brief Unlinked UI Framework (UR) - ui/palette.cpp
+ * 
+ * Part of the Unlinked immediate-mode graphics and user interface framework.
+ */
+
 #include "ur/palette.hpp"
 
 #include "Context.h"

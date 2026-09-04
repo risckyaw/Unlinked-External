@@ -1,5 +1,12 @@
 #pragma once
 
+/**
+ * @file Font.h
+ * @brief Unlinked UI Framework (UR) - engine/Text/Font/Font.h
+ * 
+ * Part of the Unlinked immediate-mode graphics and user interface framework.
+ */
+
 #include <memory>
 #include <string>
 #include <vector>

@@ -1,5 +1,12 @@
 #pragma once
 
+/**
+ * @file Layout.h
+ * @brief Unlinked UI Framework (UR) - engine/Interface/Layout/Layout.h
+ * 
+ * Part of the Unlinked immediate-mode graphics and user interface framework.
+ */
+
 #include <memory>
 #include <string>
 #include <vector>

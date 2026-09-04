@@ -1,5 +1,12 @@
 #pragma once
 
+/**
+ * @file Style.h
+ * @brief Unlinked UI Framework (UR) - engine/Interface/Style/Style.h
+ * 
+ * Part of the Unlinked immediate-mode graphics and user interface framework.
+ */
+
 #include <memory>
 
 #include "Geometry.h"
