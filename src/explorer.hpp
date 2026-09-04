@@ -1,5 +1,10 @@
 #pragma once
 
+/**
+ * @file explorer.hpp
+ * @brief Unlinked External - In-game instance tree explorer, class search, and hierarchy manipulation.
+ */
+
 #include <cstring>
 #include "explorer_icons.h"
 

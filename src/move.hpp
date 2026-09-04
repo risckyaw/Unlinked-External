@@ -1,5 +1,10 @@
 #pragma once
 
+/**
+ * @file move.hpp
+ * @brief Unlinked External - Smooth aimbot mouse interpolation, predictive lead calculations, and targeting deltas.
+ */
+
 #include <Windows.h>
 
 #include "world.hpp"

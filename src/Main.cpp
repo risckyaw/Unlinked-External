@@ -1,3 +1,8 @@
+/**
+ * @file Main.cpp
+ * @brief Unlinked External - Main application entry point, window management, overlay rendering loop, and UI composition.
+ */
+
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 

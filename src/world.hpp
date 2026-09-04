@@ -1,5 +1,10 @@
 #pragma once
 
+/**
+ * @file world.hpp
+ * @brief Unlinked External - Core process memory reader, DataModel traversing, matrix transforms, and math primitives.
+ */
+
 #include <Windows.h>
 #include <TlHelp32.h>
 

@@ -1,5 +1,10 @@
 #pragma once
 
+/**
+ * @file bundle.hpp
+ * @brief Unlinked External - Embedded font/resource extraction and runtime asset hydration helpers.
+ */
+
 #include "resource.h"
 #include "ur/config.hpp"
 

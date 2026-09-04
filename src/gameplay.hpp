@@ -1,5 +1,10 @@
 #pragma once
 
+/**
+ * @file gameplay.hpp
+ * @brief Unlinked External - Player physics modifiers, jump power adjustments, and movement hooks.
+ */
+
 #include "world.hpp"
 
 #include <Windows.h>

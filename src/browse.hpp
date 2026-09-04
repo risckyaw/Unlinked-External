@@ -1,5 +1,10 @@
 #pragma once
 
+/**
+ * @file browse.hpp
+ * @brief Unlinked External - DataModel hierarchy browser, instance property inspector, and live tree cache.
+ */
+
 #include "world.hpp"
 #include "explorer.hpp"
 #include <cstdio>

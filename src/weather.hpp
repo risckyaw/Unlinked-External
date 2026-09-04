@@ -1,5 +1,10 @@
 #pragma once
 
+/**
+ * @file weather.hpp
+ * @brief Unlinked External - Menu background shader effects, particle snow simulation, and visual styling.
+ */
+
 #include "Shaders.h"
 
 #include <cmath>

@@ -1,5 +1,10 @@
 #pragma once
 
+/**
+ * @file silent.hpp
+ * @brief Unlinked External - Silent aim raycast calculation, target trajectory leading, and hit simulation.
+ */
+
 #include "offsets.hpp"
 #include "world.hpp"
 

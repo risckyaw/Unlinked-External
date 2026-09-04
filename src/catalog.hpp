@@ -1,5 +1,10 @@
 #pragma once
 
+/**
+ * @file catalog.hpp
+ * @brief Unlinked External - Color presets, visual styling configs, and palette lookups.
+ */
+
 #include "ice.hpp"
 
 #include "Shaders.h"

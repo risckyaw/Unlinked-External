@@ -1,5 +1,10 @@
 #pragma once
 
+/**
+ * @file ice.hpp
+ * @brief Unlinked External - Process memory protection helpers and frozen state management.
+ */
+
 #include <chrono>
 #include <cstdio>
 

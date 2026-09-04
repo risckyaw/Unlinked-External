@@ -1,5 +1,10 @@
 #pragma once
 
+/**
+ * @file sense.hpp
+ * @brief Unlinked External - ESP overlay visualizers, 2D/3D boxes, skeleton joints, snaplines, and player tags.
+ */
+
 #include <Windows.h>
 #include <ShlObj.h>
 

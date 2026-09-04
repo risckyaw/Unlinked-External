@@ -1,5 +1,10 @@
 #pragma once
 
+/**
+ * @file store.hpp
+ * @brief Unlinked External - Configuration profile serialization and preset management (%AppData%\Unlinked).
+ */
+
 #include <Windows.h>
 #include <ShlObj.h>
 #include <Shellapi.h>

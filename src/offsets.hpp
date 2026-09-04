@@ -1,5 +1,10 @@
 #pragma once
 
+/**
+ * @file offsets.hpp
+ * @brief Unlinked External - Dynamic offset synchronization with offsets dump API and local version cache.
+ */
+
 #include <Windows.h>
 #include <winhttp.h>
 #include <ShlObj.h>
