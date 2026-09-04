@@ -67,7 +67,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
-set "OUT=build\%PRESET%\ff0l.exe"
+set "OUT=build\%PRESET%\Unlinked.exe"
 if not exist "%OUT%" (
     echo Error: %OUT% was not built.
     exit /b 1
@@ -78,12 +78,12 @@ echo Run: "%~dp0%OUT%"
 exit /b 0
 
 :help
-echo Build FF0L. Uses the vendored framework and fonts in third_party.
+echo Build Unlinked. Uses the vendored framework and fonts in third_party.
 echo No extra clones. Needs Visual Studio 2022 or newer with C++ and CMake.
 echo.
 echo Examples:
 echo   build.bat
 echo   build.bat --debug
 echo.
-echo Output: build\windows-release\ff0l.exe
+echo Output: build\windows-release\Unlinked.exe
 exit /b 0

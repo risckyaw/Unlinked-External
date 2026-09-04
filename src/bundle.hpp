@@ -54,7 +54,7 @@ inline bool Boot( ) {
     if ( !GetTempPathA( MAX_PATH, Temp ) )
         return false;
 
-    std::string Root = std::string( Temp ) + "ff0l-rt";
+    std::string Root = std::string( Temp ) + "Unlinked-rt";
     std::string Fonts = Root + "\\assets\\fonts";
     std::string Icons = Root + "\\assets\\icons\\fontawesome";
     CreateDirectoryA( Root.c_str( ), nullptr );

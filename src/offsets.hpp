@@ -74,7 +74,7 @@ inline bool Folder( char* Out, int Cap ) {
     char App[ MAX_PATH ] = { };
     if ( FAILED( SHGetFolderPathA( nullptr, CSIDL_APPDATA, nullptr, SHGFP_TYPE_CURRENT, App ) ) )
         return false;
-    snprintf( Out, Cap, "%s\\ff0l", App );
+    snprintf( Out, Cap, "%s\\Unlinked", App );
     CreateDirectoryA( Out, nullptr );
     return true;
 }

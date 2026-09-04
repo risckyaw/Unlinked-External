@@ -246,6 +246,7 @@ static HANDLE FaceHandle = nullptr;
 static char FacePath[ MAX_PATH ] = { };
 static CFont TitleFace;
 static float TitleScale = 0.0f;
+static std::string LogoPath;
 
 struct Tone {
     CColor surface;
@@ -345,12 +346,12 @@ static void Tokens( ) {
 
     static const Tone Set[ 3 ] = {
         {
-            CColor( 14, 16, 20, 208 ), CColor( 16, 18, 22, 168 ), CColor( 16, 18, 24, 230 ),
-            CColor( 80, 110, 150, 70 ), CColor( 160, 196, 255, 22 ), CColor( 228, 234, 244 ),
-            CColor( 122, 134, 154 ), CColor( 88, 168, 255 ), CColor( 140, 190, 255 ),
-            CColor( 8, 12, 22, 120 ), CColor( 36, 40, 52, 242 ), CColor( 10, 12, 16, 140 ),
-            CColor( 24, 28, 36, 230 ), CColor( 28, 32, 40, 230 ), CColor( 48, 92, 150, 230 ),
-            CColor( 78, 90, 112, 110 ), CColor( 214, 220, 232 ), CColor( 236, 240, 248 )
+            CColor( 10, 28, 58, 170 ), CColor( 13, 39, 78, 145 ), CColor( 12, 34, 70, 190 ),
+            CColor( 72, 146, 230, 100 ), CColor( 130, 200, 255, 30 ), CColor( 230, 242, 255 ),
+            CColor( 145, 180, 220 ), CColor( 70, 160, 255 ), CColor( 140, 205, 255 ),
+            CColor( 5, 18, 40, 90 ), CColor( 12, 35, 70, 150 ), CColor( 8, 22, 48, 95 ),
+            CColor( 11, 30, 60, 135 ), CColor( 28, 70, 125, 180 ), CColor( 55, 145, 240, 230 ),
+            CColor( 70, 100, 140, 120 ), CColor( 220, 236, 255 ), CColor( 240, 248, 255 )
         },
         {
             CColor( 22, 16, 12, 208 ), CColor( 28, 20, 14, 168 ), CColor( 24, 18, 14, 230 ),
@@ -632,8 +633,15 @@ static void DrawIce( const CRectangle& Clip, const CRectangle& Fill, float Round
 static void DrawTitle( const CRectangle& Header, float Scale, const char* Title ) {
     EnsureTitle( Scale );
     CVector Size = TitleFace.Measure( Title );
-    float Left = Header.Left + ( Header.Width - Size.Horizontal ) * 0.5f;
+    float LogoSize = 25.0f * Scale;
+    float Gap = 8.0f * Scale;
+    unsigned long long Logo = LogoPath.empty( ) ? 0 : ur::image::file( LogoPath.c_str( ), 64 );
+    float Total = Size.Horizontal + ( Logo ? LogoSize + Gap : 0.0f );
+    float Left = Header.Left + ( Header.Width - Total ) * 0.5f;
     float Top = Header.Top + ( Header.Height - TitleFace.LineSpan ) * 0.5f;
+    if ( Logo )
+        Canvas->Image( CRectangle( Left, Header.Top + ( Header.Height - LogoSize ) * 0.5f, LogoSize, LogoSize ), Logo, CRectangle( 0.0f, 0.0f, 1.0f, 1.0f ), CColor( 255, 255, 255 ), LogoSize * 0.18f );
+    Left += Logo ? LogoSize + Gap : 0.0f;
     Canvas->Write( &TitleFace, CVector( Left, Top ), Dress.inkHot.Fade( 0.93f ), Title );
 }
 
@@ -2813,9 +2821,9 @@ static float LiveFps( ) {
 static void MarkLine( char* Line, size_t Cap ) {
     float Fps = LiveFps( );
     if ( Menu.watermark && Menu.showFps )
-        snprintf( Line, Cap, "ff0l   %.0f fps", ( double )Fps );
+        snprintf( Line, Cap, "Unlinked   %.0f fps", ( double )Fps );
     else if ( Menu.watermark )
-        snprintf( Line, Cap, "ff0l" );
+        snprintf( Line, Cap, "Unlinked" );
     else
         snprintf( Line, Cap, "%.0f fps", ( double )Fps );
 }
@@ -3655,7 +3663,7 @@ static void Draw( float Across, float Vertical ) {
     Canvas->Rectangle( Bounds, Style->Surface, Round );
 
     DrawIce( Header, Bounds, Round, 1.0f );
-    DrawTitle( Header, Scale, "ff0l" );
+    DrawTitle( Header, Scale, "Unlinked" );
     bool CloseBusy = DrawClose( Header, Point, Click && !OverExplore, Scale, "close.hover", true );
 
     Canvas->Rectangle( Stack, Dress.rail, 12.0f * Scale );
@@ -3831,6 +3839,15 @@ static void BindFace( ) {
 int WINAPI WinMain( HINSTANCE, HINSTANCE, LPSTR, int ) {
     BindFace( );
 
+    char Module[ MAX_PATH ] = { };
+    GetModuleFileNameA( nullptr, Module, MAX_PATH );
+    LogoPath = Module;
+    size_t Slash = LogoPath.find_last_of( "\\/" );
+    if ( Slash != std::string::npos )
+        LogoPath = LogoPath.substr( 0, Slash ) + "\\assets\\Unlinked.webp";
+    else
+        LogoPath = "assets\\Unlinked.webp";
+
     ur::overlay::Options& Overlay = ur::app::overlay_options( );
     Overlay.topmost = true;
     Overlay.borderless = true;
@@ -3840,7 +3857,7 @@ int WINAPI WinMain( HINSTANCE, HINSTANCE, LPSTR, int ) {
     Overlay.alpha = 255;
 
     ur::app::Config Config;
-    Config.title = "ff0l";
+    Config.title = "Unlinked";
     Config.width = 1280;
     Config.height = 720;
     Config.backend = ur::Backend::DX11;
