@@ -1,5 +1,10 @@
 #pragma once
 
+/**
+ * @file ui.hpp
+ * @brief High-level declarative UI helpers, RAII window wrappers, and common widget shortcuts.
+ */
+
 #include <string>
 
 #include "Engine.h"

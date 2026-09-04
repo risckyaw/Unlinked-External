@@ -1,5 +1,13 @@
 #pragma once
 
+/**
+ * @file ur.hpp
+ * @brief Main umbrella header for the Custom Framework (UR) UI and graphics engine.
+ * 
+ * Provides unified access to application lifecycle, immediate-mode UI controls,
+ * hardware backends, overlay glass, theme styling, audio visualizers, and widgets.
+ */
+
 #include "Engine.h"
 #include "ur/app.hpp"
 #include "ur/config.hpp"

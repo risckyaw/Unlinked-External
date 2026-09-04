@@ -1,97 +1,114 @@
-# Custom Framework
+# Custom Framework (UR)
 
-A custom immediate-mode C++ UI framework for Windows. You include one header, call `run`, and draw widgets every frame.
+A high-performance, immediate-mode C++ UI framework designed for Windows desktop applications and overlays. It provides a modern declarative API, multi-backend hardware rendering (Direct3D 11, Direct3D 12, OpenGL, Vulkan), built-in animation systems, custom styling, and audio/media studio integrations.
 
 ![Showcase](docs/preview.png)
 
-## Graphics
+---
 
-Pick a backend at startup or switch at runtime. Auto tries them in this order:
+## Key Features
 
-| Backend | API | Notes |
-| --- | --- | --- |
-| Direct3D 11 | D3D11 + DXGI | Default path. Works on Windows 10 and 11. |
-| Direct3D 12 | D3D12 + DXGI | Same UI, newer device stack. |
-| OpenGL | WGL / desktop OpenGL | Fallback when you want GL. |
-| Vulkan | Optional | Off unless you build with `-DUR_VULKAN=ON` and have the Vulkan SDK. |
+- **Immediate-Mode UI**: Simple, declarative widget workflow with minimal boilerplate.
+- **Multi-Backend Rendering**: Seamless support for Direct3D 11, Direct3D 12, OpenGL, and optional Vulkan.
+- **Glass & Overlay Ready**: Layered transparent windows, click-through support, and high-DPI scaling out of the box.
+- **Comprehensive Widget Library**: Buttons, sliders, drag controls, color pickers, text inputs, segmented controls, tree views, tables, plots, histograms, and audio visualizers.
+- **Modular Architecture**: Built-in desk modules including Windows media session tracking, real-time audio analysis (mic and loopback), 3D orbit visuals, Discord RPC, and command palette (`Ctrl+K`).
+- **Smooth Motion & Theming**: Built-in spring and lerp animations, customizable rounding, drop shadows, and extensible theme palettes.
 
-The window, DPI, swapchain, and input are Win32. The same widget tree runs on every backend. Glyphs, player art, and fullscreen effects rebind when you change host.
+---
 
-## What you get
+## Graphics Backends
 
-- Immediate-mode widgets: buttons, sliders, fields, tables, tabs, menus, plots
-- Floating frames that drag, resize, collapse, and hug their content
-- Docking, command palette, toasts, themes
-- Optional desk modules: now playing, system / mic audio, analog clock, 3D orbit, Discord presence, click-through overlay
+Select your rendering backend during startup or switch dynamically at runtime:
 
-`Widgets`, `Frames`, and `Layout` are the full API. `ur::ui` is the short path. Widget IDs use `##` — `"OK##save"` stays unique, `"Desk###face"` shows only Desk.
+| Backend | API | Description & Platform Notes |
+| :--- | :--- | :--- |
+| **Direct3D 11** | `D3D11 + DXGI` | **Default path.** Highly stable and optimized for Windows 10/11. |
+| **Direct3D 12** | `D3D12 + DXGI` | Modern low-overhead graphics pipeline. |
+| **OpenGL** | `WGL / Desktop GL` | Fallback cross-compatible desktop pipeline. |
+| **Vulkan** | `Vulkan SDK` | High-performance optional backend enabled via `-DUR_VULKAN=ON`. |
 
-## Build
+The framework manages the Win32 window lifetime, DPI awareness, swapchain resizing, and input routing across all backends automatically.
 
-Windows 10 SDK, MSVC, CMake 3.20, Ninja.
+---
 
-```
-cmake --preset windows-release
-cmake --build --preset windows-release
-```
+## Getting Started
 
-| Output | What it is |
-| --- | --- |
-| `build/windows-release/Hello.exe` | Twenty-line start |
-| `build/windows-release/Showcase.exe` | Full desk |
-
-Keep `assets/` next to the exe, or run from this directory.
-
-```cmake
--DUR_VULKAN=ON
-```
-
-turns on the Vulkan backend.
-
-## Hello
+### Quick Example
 
 ```cpp
 #include "ur/ur.hpp"
 
 int WINAPI WinMain( HINSTANCE, HINSTANCE, LPSTR, int ) {
     ur::app::Config Config;
-    Config.title = "My tool";
+    Config.title = "Application";
     Config.backend = ur::Backend::DX11;
+    Config.width = 1280;
+    Config.height = 720;
+
     return ur::app::run( Config, [ ] {
-        if ( ur::ui::window Window( "Hello" ); Window ) {
-            ur::ui::label( "Direct3D 11, Direct3D 12, or OpenGL." );
-            if ( ur::ui::button( "Quit" ) )
+        if ( ur::ui::window Window( "Main Window" ); Window ) {
+            ur::ui::heading( "Custom Framework" );
+            ur::ui::label( "Direct3D 11, Direct3D 12, OpenGL, or Vulkan." );
+
+            static float Volume = 0.75f;
+            ur::ui::slider( "Master Volume", Volume, 0.0f, 1.0f );
+
+            if ( ur::ui::button( "Show Toast" ) ) {
+                ur::ui::notice( "Action completed successfully!" );
+            }
+
+            if ( ur::ui::button( "Quit" ) ) {
                 ur::app::quit( );
+            }
         }
     } );
 }
 ```
 
-`ur::Backend::DX11`, `DX12`, `OpenGL`, `Vulkan`, or `Auto`.
+---
 
-## Tree
-
-```
-include/ur          public headers
-src/app             window, settings, theme
-src/engine          widgets, layout, backends
-src/host            D3D11, D3D12, OpenGL, Vulkan hosts
-src/ui              toast, palette, motion
-src/widgets         player, orbit, desk
-src/audio           hear
-demos/hello         short start
-demos/showcase      full desk
-```
-
-[Start](docs/start.md) covers widgets, IDs, themes, and the desk modules. [Build](docs/build.md) is the compile notes.
-
-## Optional
-
-Copy `.env.example` next to the exe:
+## Project Structure
 
 ```
-UR_DISCORD_APP_ID=
-UR_SPOTIFY_CLIENT_ID=
+custom-framework/
+├── include/ur/         # Public C++ headers (app, ui, widgets, overlay, theme, etc.)
+├── src/
+│   ├── app/            # Window lifecycle, DPI handling, settings, theme persistence
+│   ├── engine/         # Immediate-mode widget rendering, layout engine, canvas primitives
+│   ├── host/           # D3D11, D3D12, OpenGL, and Vulkan rendering backends
+│   ├── ui/             # Command palette, toast notifications, motion & spring physics
+│   ├── widgets/        # Specialized widgets (media player, 3D orbit, desk tools)
+│   └── audio/          # WASAPI audio capture, waveform, and spectrum analyzer
+├── demos/
+│   ├── hello/          # Minimal 20-line introductory demo
+│   └── showcase/       # Complete feature showcase and widget gallery
+└── docs/               # Detailed guides (start.md, build.md)
 ```
 
-Now playing uses the Windows media session. Discord stays off until you set an app id. Hear can follow PC output, the microphone, or both.
+---
+
+## Building
+
+### Requirements
+- Windows 10 / 11 (64-bit)
+- MSVC (Visual Studio 2022 recommended with "Desktop development with C++")
+- CMake 3.20+ and Ninja
+
+### Build Commands
+```bash
+cmake --preset windows-release
+cmake --build --preset windows-release
+```
+
+| Built Target | Description |
+| :--- | :--- |
+| `build/windows-release/Hello.exe` | Minimal quickstart application |
+| `build/windows-release/Showcase.exe` | Full desk showcase application |
+
+---
+
+## Documentation
+
+- [Getting Started Guide](docs/start.md) — Comprehensive overview of UI widgets, ID stack, themes, and desk modules.
+- [Build Instructions](docs/build.md) — Detailed compiler configurations, CMake options, and backend prerequisites.

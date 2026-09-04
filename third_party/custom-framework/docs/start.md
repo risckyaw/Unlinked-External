@@ -1,20 +1,28 @@
-# Start
+# Getting Started with Custom Framework (UR)
 
-Custom Framework is immediate-mode C++ UI for Windows. It draws through Direct3D 11, Direct3D 12, OpenGL, or optional Vulkan. Include one header and call `ur::app::run`. Use `Widgets` when you want the full widget API. Add `ur::player` / `ur::hear` when you are building a desk or overlay.
+**Custom Framework** is a lightweight, immediate-mode C++ GUI and rendering library tailored for Windows. It provides multi-backend graphics rendering (Direct3D 11, Direct3D 12, OpenGL, and Vulkan) with a single, unified API.
 
-## Hello
+---
+
+## 1. Quickstart
+
+Include the umbrella header `<ur/ur.hpp>` and initialize the run loop with `ur::app::run`:
 
 ```cpp
 #include "ur/ur.hpp"
 
 int WINAPI WinMain( HINSTANCE, HINSTANCE, LPSTR, int ) {
     ur::app::Config Config;
-    Config.title = "Hello";
+    Config.title = "Hello App";
+    
     return ur::app::run( Config, [ ] {
-        if ( ur::ui::window Window( "Hello" ); Window ) {
+        if ( ur::ui::window Window( "Hello Window" ); Window ) {
             ur::ui::heading( "Custom Framework" );
-            if ( ur::ui::button( "Toast" ) )
-                ur::ui::notice( "Hello from UR" );
+            
+            if ( ur::ui::button( "Click Me" ) ) {
+                ur::ui::notice( "Button was clicked!" );
+            }
+            
             float& Volume = ur::view::number( "volume", 0.6f );
             ur::ui::slider( "Volume", Volume, 0.0f, 1.0f );
         }
@@ -22,121 +30,103 @@ int WINAPI WinMain( HINSTANCE, HINSTANCE, LPSTR, int ) {
 }
 ```
 
-`ur_add_app(myapp Main.cpp)` in CMake links the `ur` library and copies `assets/`.
+In your CMake configuration, use `ur_add_app(myapp Main.cpp)` to link the framework and copy required runtime assets automatically.
 
-## Frame loop
+---
 
-`ur::app::run` owns the window, DPI, backend, `Engine->Begin/End`, and swapchain. Your tick only draws UI.
+## 2. Window & Frame Management
 
-Advanced path, same objects as before:
+`ur::app::run` handles the Win32 message loop, high-DPI scaling, backend presentation, and swapchain synchronization.
 
+### Declarative Window (RAII)
 ```cpp
-if ( Frames->Begin( "Title" ) ) {
-    Widgets->Label( "Hello" );
+if ( ur::ui::window Window( "Window Title" ); Window ) {
+    ur::ui::label( "Inside window content" );
+}
+```
+
+### Manual Window / Frame Scope
+```cpp
+if ( Frames->Begin( "Window Title" ) ) {
+    Widgets->Label( "Inside window content" );
     Widgets->Slider( "Gain", Gain, 0.0f, 1.0f );
 }
 Frames->End( );
 ```
 
-Or RAII:
+Frame flags support `FrameMove`, `FrameResize`, `FrameCollapse`, `FrameClose`, `FrameDock` (`FrameDefault` enables all).
+
+---
+
+## 3. Immediate-Mode ID System
+
+Immediate-mode widgets identify elements by hashing their string label. To prevent ID collisions:
+- **Disambiguation**: Append `##identifier` to keep labels visible but unique: `"Save##button1"` vs `"Save##button2"`.
+- **Hidden Label**: Prefix with `##` to hide the textual label: `"##volumeSlider"`.
+- **Loop Scopes**: Wrap collections in `ur::id_scope Scope(i)`.
+
+---
+
+## 4. Layout Primitives
+
+Elements flow vertically by default. Use layout helpers for complex arrangements:
+- `Layout->SameLine()` — Places the next control on the same horizontal row.
+- `Layout->PushWidth(w)` / `Layout->PopWidth()` — Constrains control widths.
+- `Layout->BeginChild()` / `Layout->EndChild()` — Creates scrollable sub-regions.
+- `Layout->BeginTable()` / `Layout->TableRow()` / `Layout->TableColumn()` — Grid layouts.
+- `Widgets->BeginVirtual()` / `Widgets->EndVirtual()` — Virtual scrolling for thousands of items.
+
+---
+
+## 5. Widget Catalog
+
+- **Typography**: `Label`, `Faint`, `Heading`, `Section`, `Wrapped`, `Bullet`, `Colored`.
+- **Buttons**: `Button`, `Small`, `IconButton`.
+- **Toggles & Booleans**: `Check`, `Toggle`, `Radio`.
+- **Inputs & Sliders**: `Slider`, `SliderWhole`, `Drag`, `Knob`, `Number`, `Decimal`, `Vector`.
+- **Text Entry**: `Field` (single-line), `Area` (multi-line) for `char*` or `std::string`.
+- **Selection**: `Choice`, `Segments`, `List`, `FilterList`, `Selectable`.
+- **Data & Visualizers**: `Plot`, `Histogram`, `Area`, `Pie`, `Meter`, `Waveform`, `Spectrum`.
+- **Utilities**: `ColorPicker`, `Progress`, `Keybind`, `Splitter`, `Tooltip`, `BeginModal`.
+
+---
+
+## 6. Input & Keybinds
 
 ```cpp
-if ( ur::ui::window Window( "Title" ); Window ) {
-    ur::ui::label( "Hello" );
+if ( ur::pressed( ur::Key::F8 ) ) {
+    // Direct key press check
+}
+
+ur::bind::set( "overlay.toggle", ( int )ur::Key::Insert );
+if ( ur::bind::pressed( "overlay.toggle" ) ) {
+    // Action bound to named shortcut
 }
 ```
 
-Frame flags: `FrameMove`, `FrameResize`, `FrameCollapse`, `FrameClose`, `FrameDock` (`FrameDefault` = all). Pass `bool*` for a close button.
+- `Ctrl+K`: Opens the quick Command Palette (populated via `ur::palette::add(...)`).
+- `Ctrl+S`: Saves window positions and framework settings when `Config.persist` is enabled.
 
-## IDs
+---
 
-Immediate-mode widgets hash their label. Two buttons named `"OK"` collide.
+## 7. Styling & Theming
 
-- Append `##id` to keep a unique ID: `"OK##save"`
-- Hide the label after `##`: `"##palette"`
-- `ur::id_scope Scope(i)` around a loop row
-- View → IDs in the showcase, or `ur::debug::ids(&Open)`
-
-## Layout
-
-Widgets stack vertically. Then:
-
-- `Layout->SameLine()`
-- `Layout->PushWidth(w)` / `PopWidth()`
-- `Layout->BeginChild` / `EndChild`
-- `Layout->BeginTable` / `TableRow` / `TableColumn`
-- `Widgets->BeginVirtual` / `EndVirtual` for long lists
-
-## Widgets
-
-Text: `Label`, `Faint`, `Heading`, `Section`, `Wrapped`, `Bullet`, `Colored`.
-
-Buttons: `Button`, `Small`, `IconButton`.
-
-Booleans: `Check`, `Toggle`, `Radio`.
-
-Numbers: `Slider`, `SliderWhole`, `Drag`, `Knob`, `Number`, `Decimal`, `Vector`.
-
-Text: `Field` / `Area` take `char*` or `std::string`.
-
-Selection: `Choice`, `Segments`, `List`, `FilterList`, `Selectable`.
-
-Hierarchy: `Tree` / `TreeLeaf` / `TreePop`, `BeginCollapse`.
-
-Tabs, menus, popups: same as before.
-
-Data: `Plot`, `Histogram`, `Area`, `Pie`, `Meter`, `Waveform`, `Spectrum`.
-
-Other: `Color`, `Progress`, `Keybind`, `Splitter`, `BeginDisabled` / `EndDisabled`, `PushAlpha`, `BeginModal`, `Tooltip`.
-
-Most interactive widgets return `bool` (changed/clicked) and take state by reference.
-
-## Keyboard
+Themes define colors, control roundings, drop shadows, and font scalings:
 
 ```cpp
-if ( ur::pressed( ur::Key::F8 ) ) { }
-ur::bind::set( "overlay.unlock", ( int )ur::Key::F8 );
-if ( ur::bind::pressed( "overlay.unlock" ) ) { }
-```
-
-`Ctrl+K` opens the command palette after you `ur::palette::add(...)`.
-`Ctrl+S` saves layout when `Config.persist` is on.
-
-## Style
-
-```cpp
-ur::theme::apply( 2 );
+ur::theme::apply( 2 ); // Apply built-in preset
 Style->Accent = CColor( 74, 124, 255 );
-Style->Rounding = 16.0f;
-ur::theme::load_file( "assets/themes/example.theme" );
+Style->Rounding = 12.0f;
+ur::theme::load_file( "assets/themes/custom.theme" );
 ```
 
-Tokens include `Success` and `Warning` as well as `Danger`.
-Settings (`ur.settings`) remember theme, backend, VSync, glass, docking.
+---
 
-## Custom widgets
+## 8. Desk & Studio Modules
 
-```cpp
-ur::widget::Item Item = ur::widget::begin( "##pad", CVector( 80.0f, 80.0f ) );
-Canvas->Rectangle( Item.bounds, Item.hovered ? Style->Hovered : Style->Control, 8.0f );
-if ( Item.clicked )
-    ur::toast::push( "hit" );
-```
-
-## Studio modules (optional)
-
-Set `Config.media`, `Config.hear`, `Config.discord`, `Config.overlay` on the app config.
-
-- `ur::player::draw_chip / draw_compact / draw_expanded` — pass `player::Options` to hide art or transport
-- `ur::orbit::draw` — optional `shape`, `spin`, `wire`
-- `ur::desk::clock` / `mix`
-- `ur::hear::draw_wave` / `draw_spectrum` / `draw_meter`
-- `ur::overlay::Options` via `ur::app::overlay_options()`
-
-These stay off in hello. The showcase turns them on.
-
-## Backends
-
-`Config.backend = ur::Backend::Auto` tries DirectX 11, then 12, OpenGL, Vulkan. Switch at runtime with `ur::app::set_backend`. Glyphs, player art, and effects rebind themselves.
-
-`UR_VULKAN=ON` needs the Vulkan SDK.
+Optional integrations configured via `ur::app::Config`:
+- **Media Player**: `ur::player::draw_chip` / `draw_compact` / `draw_expanded` with Windows media session integration.
+- **Audio Visualizer**: `ur::hear::draw_wave` / `draw_spectrum` for mic or system loopback audio.
+- **Discord RPC**: Real-time rich presence updates.
+- **3D Orbit**: `ur::orbit::draw` for 3D viewport rendering.
+- **Transparent Overlay**: `ur::overlay::Options` for game overlays with click-through and layer glass.

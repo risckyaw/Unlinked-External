@@ -1,5 +1,10 @@
 #pragma once
 
+/**
+ * @file app.hpp
+ * @brief Application lifecycle, backend initialization, Win32 window management, and configuration.
+ */
+
 #include <functional>
 
 #include "Engine.h"
