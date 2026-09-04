@@ -33,7 +33,7 @@ if not exist "third_party\custom-framework\CMakeLists.txt" (
     exit /b 1
 )
 
-if not exist "third_party\fonts\Poppins-Regular.ttf" (
+if not exist "third_party\fonts\Inter-Regular.ttf" (
     echo Error: third_party\fonts is missing.
     echo Download the full source zip from GitHub.
     exit /b 1

@@ -43,7 +43,7 @@ constexpr int TabConfigs = 3;
 constexpr int TabSettings = 4;
 
 static const char* Fonts[ ] = {
-    "Poppins",
+    "Inter",
     "Segoe UI",
     "Segoe UI Symbol"
 };
@@ -3825,9 +3825,9 @@ static void BindFace( ) {
         Folder = "assets\\fonts\\";
 
     const char* Local[ ] = {
-        "Poppins-Regular.ttf",
-        "Poppins-Medium.ttf",
-        "Poppins-SemiBold.ttf"
+        "Inter-Regular.ttf",
+        "Inter-Medium.ttf",
+        "Inter-SemiBold.ttf"
     };
 
     for ( const char* Name : Local )

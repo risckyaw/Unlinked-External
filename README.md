@@ -139,7 +139,7 @@ build.bat           one-click compile
 assets/             fonts, icons, themes (copied next to the built exe)
 src/                overlay, aim, ESP, configs
 third_party/custom-framework   bundled UI library
-third_party/fonts              Poppins + Font Awesome
+third_party/fonts              Inter + JetBrains Mono + Outfit + Montserrat
 media/              README preview, menu clip, in-game clip
 ```
 
