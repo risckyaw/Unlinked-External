@@ -40,7 +40,27 @@ add_custom_command( TARGET Unlinked POST_BUILD
         "${CMAKE_CURRENT_SOURCE_DIR}/assets/Unlinked.webp"
         "$<TARGET_FILE_DIR:Unlinked>/assets/Unlinked.webp"
     COMMAND ${CMAKE_COMMAND} -E make_directory
+        "$<TARGET_FILE_DIR:Unlinked>/assets/icons/fontawesome"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${FONT_DIR}/fa-solid-900.woff2"
+        "$<TARGET_FILE_DIR:Unlinked>/assets/icons/fontawesome/fa-solid-900.woff2"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${FONT_DIR}/fa-regular-400.woff2"
+        "$<TARGET_FILE_DIR:Unlinked>/assets/icons/fontawesome/fa-regular-400.woff2"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${FONT_DIR}/fa-light-300.woff2"
+        "$<TARGET_FILE_DIR:Unlinked>/assets/icons/fontawesome/fa-light-300.woff2"
+    COMMAND ${CMAKE_COMMAND} -E make_directory
         "$<TARGET_FILE_DIR:Unlinked>/assets/fonts"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${FONT_DIR}/Poppins-Regular.ttf"
+        "$<TARGET_FILE_DIR:Unlinked>/assets/fonts/Poppins-Regular.ttf"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${FONT_DIR}/Poppins-Medium.ttf"
+        "$<TARGET_FILE_DIR:Unlinked>/assets/fonts/Poppins-Medium.ttf"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${FONT_DIR}/Poppins-SemiBold.ttf"
+        "$<TARGET_FILE_DIR:Unlinked>/assets/fonts/Poppins-SemiBold.ttf"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${FONT_DIR}/Inter-Regular.ttf"
         "$<TARGET_FILE_DIR:Unlinked>/assets/fonts/Inter-Regular.ttf"
