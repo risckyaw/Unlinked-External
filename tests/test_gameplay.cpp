@@ -140,4 +140,85 @@ TEST_CASE( "Gameplay: ComputeFramePacingAction thresholds" ) {
     CHECK_EQ( play::ComputeFramePacingAction( Goal, 0.0150000 ), 2 );
 }
 
+TEST_CASE( "Gameplay: ShouldTriggerAfkPulse accumulator and thresholding" ) {
+    double Wait = 10.0;
+    // Disabled state resets wait timer
+    CHECK_EQ( play::ShouldTriggerAfkPulse( false, Wait, 1.0 ), false );
+    CHECK_CLOSE( ( float )Wait, 0.0f, 0.0001f );
+
+    // Accumulates time while active
+    CHECK_EQ( play::ShouldTriggerAfkPulse( true, Wait, 5.0 ), false );
+    CHECK_CLOSE( ( float )Wait, 5.0f, 0.0001f );
+
+    CHECK_EQ( play::ShouldTriggerAfkPulse( true, Wait, 10.0 ), false );
+    CHECK_CLOSE( ( float )Wait, 15.0f, 0.0001f );
+
+    CHECK_EQ( play::ShouldTriggerAfkPulse( true, Wait, 2.9 ), false );
+    CHECK_CLOSE( ( float )Wait, 17.9f, 0.0001f );
+
+    // Reaching 18.0 seconds triggers pulse and resets wait timer
+    CHECK_EQ( play::ShouldTriggerAfkPulse( true, Wait, 0.2 ), true );
+    CHECK_CLOSE( ( float )Wait, 0.0f, 0.0001f );
+
+    // Custom threshold support
+    CHECK_EQ( play::ShouldTriggerAfkPulse( true, Wait, 3.5, 3.0 ), true );
+    CHECK_CLOSE( ( float )Wait, 0.0f, 0.0001f );
+}
+
+TEST_CASE( "Gameplay: ComputeWindowCenterPoint client rect centering" ) {
+    RECT Rect1 = { 0, 0, 1920, 1080 };
+    POINT Pt1 = play::ComputeWindowCenterPoint( Rect1 );
+    CHECK_EQ( Pt1.x, 960 );
+    CHECK_EQ( Pt1.y, 540 );
+
+    RECT Rect2 = { 100, 200, 900, 800 };
+    POINT Pt2 = play::ComputeWindowCenterPoint( Rect2 );
+    CHECK_EQ( Pt2.x, 400 );
+    CHECK_EQ( Pt2.y, 300 );
+
+    RECT Rect3 = { 0, 0, 0, 0 };
+    POINT Pt3 = play::ComputeWindowCenterPoint( Rect3 );
+    CHECK_EQ( Pt3.x, 0 );
+    CHECK_EQ( Pt3.y, 0 );
+}
+
+TEST_CASE( "Gameplay: ShouldThrottleUncap interval deadline checking" ) {
+    // When not applied yet, never throttle (allow first apply)
+    CHECK_EQ( play::ShouldThrottleUncap( false, 0, 1000 ), false );
+    CHECK_EQ( play::ShouldThrottleUncap( false, 500, 1000 ), false );
+
+    // When applied, throttle if current time is before deadline
+    CHECK_EQ( play::ShouldThrottleUncap( true, 500, 1000 ), true );
+    CHECK_EQ( play::ShouldThrottleUncap( true, 999, 1000 ), true );
+    CHECK_EQ( play::ShouldThrottleUncap( true, 1000, 1000 ), false );
+    CHECK_EQ( play::ShouldThrottleUncap( true, 1500, 1000 ), false );
+}
+
+TEST_CASE( "Gameplay: FormatRobloxSettingsPath path formatting and validation" ) {
+    char Path[ MAX_PATH ] = { };
+    CHECK_EQ( play::FormatRobloxSettingsPath( "C:\\AppData\\Local", Path, sizeof( Path ) ), true );
+    CHECK_EQ( std::string( Path ), "C:\\AppData\\Local\\Roblox\\GlobalBasicSettings_13.xml" );
+
+    // Validation failures
+    CHECK_EQ( play::FormatRobloxSettingsPath( nullptr, Path, sizeof( Path ) ), false );
+    CHECK_EQ( play::FormatRobloxSettingsPath( "", Path, sizeof( Path ) ), false );
+    CHECK_EQ( play::FormatRobloxSettingsPath( "C:\\AppData\\Local", nullptr, sizeof( Path ) ), false );
+    CHECK_EQ( play::FormatRobloxSettingsPath( "C:\\AppData\\Local", Path, 0 ), false );
+    CHECK_EQ( play::FormatRobloxSettingsPath( "C:\\AppData\\Local", Path, 10 ), false ); // Truncation
+}
+
+TEST_CASE( "Gameplay: IsValidXmlFileSize boundary checking" ) {
+    CHECK_EQ( play::IsValidXmlFileSize( 0 ), false );
+    CHECK_EQ( play::IsValidXmlFileSize( 1 ), true );
+    CHECK_EQ( play::IsValidXmlFileSize( 4096 ), true );
+    CHECK_EQ( play::IsValidXmlFileSize( 1u << 20 ), true );
+    CHECK_EQ( play::IsValidXmlFileSize( ( 1u << 20 ) + 1 ), false );
+    CHECK_EQ( play::IsValidXmlFileSize( 10000000 ), false );
+
+    // Custom max size
+    CHECK_EQ( play::IsValidXmlFileSize( 50, 40 ), false );
+    CHECK_EQ( play::IsValidXmlFileSize( 40, 40 ), true );
+}
+
+
 

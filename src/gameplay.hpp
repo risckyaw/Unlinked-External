@@ -97,17 +97,57 @@ inline bool FormatWatermark( bool Watermark, bool ShowFps, float Fps, char* Out,
     return true;
 }
 
+inline constexpr double DefaultFpsCap = 240.0;
+inline constexpr double UncappedFps = 10000.0;
+inline constexpr unsigned int UncapThrottleMs = 2500;
+inline constexpr double AfkPulseIntervalSec = 18.0;
+
+[[nodiscard]] inline bool ShouldTriggerAfkPulse( bool On, double& Wait, double Dt, double ThresholdSec = 18.0 ) noexcept {
+    if ( !On ) {
+        Wait = 0.0;
+        return false;
+    }
+    Wait += Dt;
+    if ( Wait < ThresholdSec )
+        return false;
+    Wait = 0.0;
+    return true;
+}
+
+[[nodiscard]] inline POINT ComputeWindowCenterPoint( const RECT& Box ) noexcept {
+    POINT Pt;
+    Pt.x = ( Box.right - Box.left ) / 2;
+    Pt.y = ( Box.bottom - Box.top ) / 2;
+    return Pt;
+}
+
+[[nodiscard]] inline bool ShouldThrottleUncap( bool Applied, unsigned Now, unsigned NextDeadline ) noexcept {
+    return Applied && ( Now < NextDeadline );
+}
+
+[[nodiscard]] inline bool FormatRobloxSettingsPath( const char* Root, char* Out, size_t Cap ) noexcept {
+    if ( !Root || !Root[ 0 ] || !Out || Cap == 0 )
+        return false;
+    int Res = snprintf( Out, Cap, "%s\\Roblox\\GlobalBasicSettings_13.xml", Root );
+    return Res > 0 && ( size_t )Res < Cap;
+}
+
+[[nodiscard]] inline bool IsValidXmlFileSize( DWORD Size, DWORD MaxSize = 1u << 20 ) noexcept {
+    return Size > 0 && Size <= MaxSize;
+}
+
 inline void PatchXml( bool Uncap ) {
     char Path[ MAX_PATH ] = { };
     char Root[ MAX_PATH ] = { };
     if ( GetEnvironmentVariableA( "LOCALAPPDATA", Root, MAX_PATH ) == 0 || !Root[ 0 ] )
         return;
-    snprintf( Path, sizeof( Path ), "%s\\Roblox\\GlobalBasicSettings_13.xml", Root );
+    if ( !FormatRobloxSettingsPath( Root, Path, sizeof( Path ) ) )
+        return;
     unlinked::UniqueHandle File( CreateFileA( Path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr ) );
     if ( !File )
         return;
     DWORD Size = GetFileSize( File.get( ), nullptr );
-    if ( Size == 0 || Size > 1u << 20 ) {
+    if ( !IsValidXmlFileSize( Size ) ) {
         return;
     }
     std::string Body;
@@ -130,14 +170,8 @@ inline void PatchXml( bool Uncap ) {
 
 inline void TickAfk( bool On, double Dt ) {
     static double Wait = 0.0;
-    if ( !On ) {
-        Wait = 0.0;
+    if ( !ShouldTriggerAfkPulse( On, Wait, Dt, AfkPulseIntervalSec ) )
         return;
-    }
-    Wait += Dt;
-    if ( Wait < 18.0 )
-        return;
-    Wait = 0.0;
 
     HWND Window = world::GameWindow( );
     if ( !Window )
@@ -145,9 +179,8 @@ inline void TickAfk( bool On, double Dt ) {
 
     RECT Box = { };
     GetClientRect( Window, &Box );
-    int X = ( Box.right - Box.left ) / 2;
-    int Y = ( Box.bottom - Box.top ) / 2;
-    LPARAM Spot = MAKELPARAM( X, Y );
+    POINT Center = ComputeWindowCenterPoint( Box );
+    LPARAM Spot = MAKELPARAM( Center.x, Center.y );
     PostMessageW( Window, WM_MOUSEMOVE, 0, Spot );
     PostMessageW( Window, WM_RBUTTONDOWN, MK_RBUTTON, Spot );
     PostMessageW( Window, WM_RBUTTONUP, 0, Spot );
@@ -158,7 +191,7 @@ inline void TickUncap( bool On ) {
     static unsigned Next = 0;
     if ( !On ) {
         if ( Applied && world::Attach( ) ) {
-            world::SetFps( 240.0 );
+            world::SetFps( DefaultFpsCap );
             PatchXml( false );
         }
         Applied = 0;
@@ -166,16 +199,16 @@ inline void TickUncap( bool On ) {
         return;
     }
     unsigned Now = GetTickCount( );
-    if ( Applied && Now < Next )
+    if ( ShouldThrottleUncap( Applied != 0, Now, Next ) )
         return;
     if ( !world::Attach( ) )
         return;
-    if ( !world::SetFps( 10000.0 ) )
+    if ( !world::SetFps( UncappedFps ) )
         return;
     if ( !Applied )
         PatchXml( true );
     Applied = 1;
-    Next = Now + 2500;
+    Next = Now + UncapThrottleMs;
 }
 
-}
+}
