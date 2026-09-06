@@ -9,6 +9,7 @@
 #include <ShlObj.h>
 #include <Shellapi.h>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 
 namespace store {
@@ -180,6 +181,11 @@ inline bool Take( const char* Body, const char* Key, int& Out ) {
     char Needle[ 64 ];
     snprintf( Needle, sizeof( Needle ), "%s ", Key );
     const char* Hit = strstr( Body, Needle );
+    while ( Hit ) {
+        if ( Hit == Body || *( Hit - 1 ) == '\n' || *( Hit - 1 ) == '\r' )
+            break;
+        Hit = strstr( Hit + 1, Needle );
+    }
     if ( !Hit )
         return false;
     Out = atoi( Hit + strlen( Needle ) );
@@ -187,11 +193,21 @@ inline bool Take( const char* Body, const char* Key, int& Out ) {
 }
 
 inline bool TakeF( const char* Body, const char* Key, float& Out ) {
-    int Whole = 0;
-    if ( !Take( Body, Key, Whole ) )
+    if ( !Body || !Key )
         return false;
-    Out = ( float )Whole;
-    return true;
+    char Needle[ 64 ];
+    snprintf( Needle, sizeof( Needle ), "%s ", Key );
+    const char* Hit = strstr( Body, Needle );
+    while ( Hit ) {
+        if ( Hit == Body || *( Hit - 1 ) == '\n' || *( Hit - 1 ) == '\r' )
+            break;
+        Hit = strstr( Hit + 1, Needle );
+    }
+    if ( !Hit )
+        return false;
+    char* End = nullptr;
+    Out = strtof( Hit + strlen( Needle ), &End );
+    return End != Hit + strlen( Needle );
 }
 
 inline bool TakeB( const char* Body, const char* Key, bool& Out ) {

@@ -247,8 +247,8 @@ static Channel LiveCh;
 static bool ChanMouse = false;
 
 static bool KeyWas[ 256 ] = { };
-static HANDLE FaceHandle = nullptr;
-static char FacePath[ MAX_PATH ] = { };
+static char LoadedFaces[ 8 ][ MAX_PATH ] = { };
+static int LoadedFaceCount = 0;
 static CFont TitleFace;
 static float TitleScale = 0.0f;
 static std::string LogoPath;
@@ -3812,11 +3812,17 @@ static void Tick( ) {
 static bool LoadFace( const char* Path ) {
     if ( AddFontResourceExA( Path, FR_PRIVATE, nullptr ) <= 0 )
         return false;
-    if ( !FaceHandle ) {
-        lstrcpynA( FacePath, Path, MAX_PATH );
-        FaceHandle = ( HANDLE )1;
-    }
+    if ( LoadedFaceCount < 8 )
+        lstrcpynA( LoadedFaces[ LoadedFaceCount++ ], Path, MAX_PATH );
     return true;
+}
+
+static void UnloadFaces( ) {
+    for ( int Index = 0; Index < LoadedFaceCount; Index++ ) {
+        if ( LoadedFaces[ Index ][ 0 ] )
+            RemoveFontResourceExA( LoadedFaces[ Index ], FR_PRIVATE, nullptr );
+    }
+    LoadedFaceCount = 0;
 }
 
 static void BindFace( ) {
@@ -3878,7 +3884,6 @@ int WINAPI WinMain( HINSTANCE, HINSTANCE, LPSTR, int ) {
     world::Boot( );
     int Code = ur::app::run( Config, Tick );
     TitleFace.Destroy( );
-    if ( FaceHandle && FacePath[ 0 ] )
-        RemoveFontResourceExA( FacePath, FR_PRIVATE, nullptr );
+    UnloadFaces( );
     return Code;
 }

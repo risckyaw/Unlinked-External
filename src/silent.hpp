@@ -180,7 +180,7 @@ inline std::vector< uint8_t > MakeThunk( uintptr_t State, uintptr_t Orig ) {
     Code.insert( Code.end( ), { 0x41, 0x83, 0x3A, 0x00 } );
     Jz( );
 
-    if ( Abi == 0 ) {
+    if constexpr ( Abi == 0 ) {
         Code.insert( Code.end( ), { 0x4D, 0x85, 0xC0 } ); Jz( );
         Code.insert( Code.end( ), { 0x4D, 0x85, 0xC9 } ); Jz( );
     } else {
@@ -188,7 +188,7 @@ inline std::vector< uint8_t > MakeThunk( uintptr_t State, uintptr_t Orig ) {
         Code.insert( Code.end( ), { 0x4D, 0x85, 0xC0 } ); Jz( );
     }
 
-    if ( Abi == 0 ) {
+    if constexpr ( Abi == 0 ) {
         Code.insert( Code.end( ), { 0xF3, 0x41, 0x0F, 0x10, 0x29 } );
         Code.insert( Code.end( ), { 0xF3, 0x0F, 0x59, 0xED } );
         Code.insert( Code.end( ), { 0xF3, 0x41, 0x0F, 0x10, 0x61, 0x04 } );
@@ -208,19 +208,19 @@ inline std::vector< uint8_t > MakeThunk( uintptr_t State, uintptr_t Orig ) {
     Code.insert( Code.end( ), { 0xF3, 0x0F, 0x51, 0xED } );
 
     Code.insert( Code.end( ), { 0xF3, 0x41, 0x0F, 0x10, 0x42, 0x08 } );
-    if ( Abi == 0 )
+    if constexpr ( Abi == 0 )
         Code.insert( Code.end( ), { 0xF3, 0x41, 0x0F, 0x5C, 0x00 } );
     else
         Code.insert( Code.end( ), { 0xF3, 0x0F, 0x5C, 0x02 } );
 
     Code.insert( Code.end( ), { 0xF3, 0x41, 0x0F, 0x10, 0x4A, 0x0C } );
-    if ( Abi == 0 )
+    if constexpr ( Abi == 0 )
         Code.insert( Code.end( ), { 0xF3, 0x41, 0x0F, 0x5C, 0x48, 0x04 } );
     else
         Code.insert( Code.end( ), { 0xF3, 0x0F, 0x5C, 0x4A, 0x04 } );
 
     Code.insert( Code.end( ), { 0xF3, 0x41, 0x0F, 0x10, 0x52, 0x10 } );
-    if ( Abi == 0 )
+    if constexpr ( Abi == 0 )
         Code.insert( Code.end( ), { 0xF3, 0x41, 0x0F, 0x5C, 0x50, 0x08 } );
     else
         Code.insert( Code.end( ), { 0xF3, 0x0F, 0x5C, 0x52, 0x08 } );
@@ -240,7 +240,7 @@ inline std::vector< uint8_t > MakeThunk( uintptr_t State, uintptr_t Orig ) {
     Code.insert( Code.end( ), { 0xF3, 0x0F, 0x59, 0xCD } );
     Code.insert( Code.end( ), { 0xF3, 0x0F, 0x59, 0xD5 } );
 
-    if ( Abi == 0 ) {
+    if constexpr ( Abi == 0 ) {
         Code.insert( Code.end( ), { 0xF3, 0x41, 0x0F, 0x11, 0x01 } );
         Code.insert( Code.end( ), { 0xF3, 0x41, 0x0F, 0x11, 0x49, 0x04 } );
         Code.insert( Code.end( ), { 0xF3, 0x41, 0x0F, 0x11, 0x51, 0x08 } );
@@ -256,7 +256,7 @@ inline std::vector< uint8_t > MakeThunk( uintptr_t State, uintptr_t Orig ) {
     for ( size_t At : Skips )
         PatchRel32( Code, At, Skip );
 
-    if ( Abi == 0 ) {
+    if constexpr ( Abi == 0 ) {
         Code.insert( Code.end( ), { 0x48, 0x8B, 0x84, 0x24, 0x90, 0x00, 0x00, 0x00 } );
         Code.insert( Code.end( ), { 0x48, 0x89, 0x44, 0x24, 0x20 } );
     }
