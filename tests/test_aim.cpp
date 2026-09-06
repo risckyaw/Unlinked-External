@@ -242,3 +242,79 @@ TEST_CASE( "Aim: ComputeFovPulse bounds and oscillation" ) {
     }
 }
 
+TEST_CASE( "Aim: ComputeFarDistance snapshot scanning and fallback" ) {
+    struct MockActor { float dist; };
+
+    // Empty list -> returns MinFar default (1.0f)
+    CHECK_CLOSE( aim::ComputeFarDistance<MockActor>( nullptr, 0 ), 1.0f, 0.001f );
+    CHECK_CLOSE( aim::ComputeFarDistance<MockActor>( nullptr, 0, 5.0f ), 5.0f, 0.001f );
+
+    // Single actor smaller than floor
+    MockActor SingleSmall[] = { { 0.5f } };
+    CHECK_CLOSE( aim::ComputeFarDistance( SingleSmall, 1 ), 1.0f, 0.001f );
+
+    // Single actor larger than floor
+    MockActor SingleLarge[] = { { 150.0f } };
+    CHECK_CLOSE( aim::ComputeFarDistance( SingleLarge, 1 ), 150.0f, 0.001f );
+
+    // Multiple actors
+    MockActor List[] = { { 45.0f }, { 210.5f }, { 88.0f }, { 12.0f } };
+    CHECK_CLOSE( aim::ComputeFarDistance( List, 4 ), 210.5f, 0.001f );
+}
+
+TEST_CASE( "Aim: ComputeScreenDistance 2D Euclidean distance" ) {
+    // Center exactly on aim point
+    CHECK_CLOSE( aim::ComputeScreenDistance( 960.0f, 540.0f, 960.0f, 540.0f ), 0.0f, 0.001f );
+
+    // Horizontal offset
+    CHECK_CLOSE( aim::ComputeScreenDistance( 1060.0f, 540.0f, 960.0f, 540.0f ), 100.0f, 0.001f );
+    CHECK_CLOSE( aim::ComputeScreenDistance( 860.0f, 540.0f, 960.0f, 540.0f ), 100.0f, 0.001f );
+
+    // Vertical offset
+    CHECK_CLOSE( aim::ComputeScreenDistance( 960.0f, 600.0f, 960.0f, 540.0f ), 60.0f, 0.001f );
+
+    // Diagonal 3-4-5 triangle
+    CHECK_CLOSE( aim::ComputeScreenDistance( 963.0f, 544.0f, 960.0f, 540.0f ), 5.0f, 0.001f );
+}
+
+TEST_CASE( "Aim: IsBetterTarget scoring and threshold rejection" ) {
+    // Normal case: lower score is better
+    CHECK( aim::IsBetterTarget( 50.0f, 100.0f ) );
+    CHECK( !aim::IsBetterTarget( 150.0f, 100.0f ) );
+    CHECK( !aim::IsBetterTarget( 100.0f, 100.0f ) ); // Equal is not better
+
+    // Scores >= threshold (1.0e9f) are rejected
+    CHECK( !aim::IsBetterTarget( 1.0e9f, 2.0e9f ) );
+    CHECK( !aim::IsBetterTarget( 1.5e9f, 2.0e9f ) );
+
+    // Custom threshold
+    CHECK( aim::IsBetterTarget( 40.0f, 80.0f, 50.0f ) );
+    CHECK( !aim::IsBetterTarget( 60.0f, 80.0f, 50.0f ) );
+}
+
+TEST_CASE( "Aim: IsPointInViewBounds viewport bounds and margin checking" ) {
+    float W = 1920.0f, H = 1080.0f;
+
+    // Inside view
+    CHECK( aim::IsPointInViewBounds( 960.0f, 540.0f, W, H ) );
+    CHECK( aim::IsPointInViewBounds( 0.0f, 0.0f, W, H ) );
+    CHECK( aim::IsPointInViewBounds( W, H, W, H ) );
+
+    // Within 48px margin
+    CHECK( aim::IsPointInViewBounds( -30.0f, 540.0f, W, H, 48.0f ) );
+    CHECK( aim::IsPointInViewBounds( W + 40.0f, 540.0f, W, H, 48.0f ) );
+    CHECK( aim::IsPointInViewBounds( 960.0f, -40.0f, W, H, 48.0f ) );
+    CHECK( aim::IsPointInViewBounds( 960.0f, H + 40.0f, W, H, 48.0f ) );
+
+    // Outside margin
+    CHECK( !aim::IsPointInViewBounds( -50.0f, 540.0f, W, H, 48.0f ) );
+    CHECK( !aim::IsPointInViewBounds( W + 50.0f, 540.0f, W, H, 48.0f ) );
+    CHECK( !aim::IsPointInViewBounds( 960.0f, -50.0f, W, H, 48.0f ) );
+    CHECK( !aim::IsPointInViewBounds( 960.0f, H + 50.0f, W, H, 48.0f ) );
+
+    // Undersized viewport (< 8px)
+    CHECK( !aim::IsPointInViewBounds( 2.0f, 2.0f, 6.0f, 1080.0f ) );
+    CHECK( !aim::IsPointInViewBounds( 2.0f, 2.0f, 1920.0f, 4.0f ) );
+}
+
+

@@ -1467,11 +1467,7 @@ static bool AimDot( const world::Vec3& World, CVector& Out ) {
     if ( !world::ToView( World, View ) )
         return false;
     const world::Snap& Live = world::View( );
-    float Wide = ( float )Live.viewW;
-    float Tall = ( float )Live.viewH;
-    if ( Wide < 8.0f || Tall < 8.0f )
-        return false;
-    if ( View.x < -48.0f || View.y < -48.0f || View.x > Wide + 48.0f || View.y > Tall + 48.0f )
+    if ( !aim::IsPointInViewBounds( View.x, View.y, ( float )Live.viewW, ( float )Live.viewH, 48.0f ) )
         return false;
     world::Dot Hit;
     if ( !world::ToScreen( World, Hit ) )
@@ -1557,17 +1553,11 @@ static void TickAim( float Scale ) {
         const world::Actor* Best = nullptr;
         float Limit = AimRadius( Scale, Fov );
         float BestScore = 1.0e9f;
-        float Far = 1.0f;
-        for ( int Index = 0; Index < Snap.count; Index++ ) {
-            if ( Snap.list[ Index ].dist > Far )
-                Far = Snap.list[ Index ].dist;
-        }
+        float Far = aim::ComputeFarDistance( Snap.list, Snap.count );
         CVector Chosen;
         for ( int Index = 0; Index < Snap.count; Index++ ) {
             const world::Actor& Item = Snap.list[ Index ];
-            if ( Team && Item.mate )
-                continue;
-            if ( NeedVis && !Item.vis )
+            if ( !aim::IsTargetValid( Item.mate, Item.vis, Team, NeedVis ) )
                 continue;
             CVector At;
             float Screen = 1.0e9f;
@@ -1576,9 +1566,7 @@ static void TickAim( float Scale ) {
                 CVector Point;
                 if ( !EspDot( World, Point ) )
                     return;
-                float Dx = Point.Horizontal - Mid.Horizontal;
-                float Dy = Point.Vertical - Mid.Vertical;
-                float Dist = sqrtf( Dx * Dx + Dy * Dy );
+                float Dist = aim::ComputeScreenDistance( Point.Horizontal, Point.Vertical, Mid.Horizontal, Mid.Vertical );
                 if ( !OnScreen || Dist < Screen ) {
                     OnScreen = true;
                     Screen = Dist;
@@ -1589,9 +1577,7 @@ static void TickAim( float Scale ) {
             if ( !OnScreen )
                 continue;
             float Score = aim::ScoreTarget( Screen, Limit, Item.dist, Far, Sort );
-            if ( Score >= 1.0e9f )
-                continue;
-            if ( Score < BestScore ) {
+            if ( aim::IsBetterTarget( Score, BestScore ) ) {
                 BestScore = Score;
                 Best = &Item;
                 Chosen = At;

@@ -177,6 +177,36 @@ inline bool IsTargetValid( bool IsMate, bool IsVis, bool FilterTeam, bool Filter
     return true;
 }
 
+template< typename TActor >
+inline float ComputeFarDistance( const TActor* Actors, int Count, float MinFar = 1.0f ) {
+    float Far = MinFar;
+    if ( !Actors || Count <= 0 )
+        return Far;
+    for ( int Index = 0; Index < Count; Index++ ) {
+        if ( Actors[ Index ].dist > Far )
+            Far = Actors[ Index ].dist;
+    }
+    return Far;
+}
+
+inline float ComputeScreenDistance( float PointX, float PointY, float MidX, float MidY ) {
+    float Dx = PointX - MidX;
+    float Dy = PointY - MidY;
+    return sqrtf( Dx * Dx + Dy * Dy );
+}
+
+inline bool IsBetterTarget( float CandidateScore, float BestScore, float MaxThreshold = 1.0e9f ) {
+    return CandidateScore < MaxThreshold && CandidateScore < BestScore;
+}
+
+inline bool IsPointInViewBounds( float X, float Y, float ViewWidth, float ViewHeight, float Margin = 48.0f, float MinDimension = 8.0f ) {
+    if ( ViewWidth < MinDimension || ViewHeight < MinDimension )
+        return false;
+    if ( X < -Margin || Y < -Margin || X > ViewWidth + Margin || Y > ViewHeight + Margin )
+        return false;
+    return true;
+}
+
 struct SmoothParams {
     float tau = 0.035f;
     float capPx = 14000.0f;
