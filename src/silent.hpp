@@ -269,9 +269,29 @@ inline std::vector< uint8_t > MakeThunk( uintptr_t State, uintptr_t Orig ) {
     return Code;
 }
 
-inline bool RegionPad( uintptr_t Addr, size_t Need ) {
-    uint8_t Buf[ 256 ];
-    if ( Need > sizeof( Buf ) || !world::Pull( Addr, Buf, Need ) )
+struct ScreenScale {
+    float tx = 0.0f;
+    float ty = 0.0f;
+    float sw = 0.0f;
+    float sh = 0.0f;
+};
+
+struct ViewWarpResult {
+    int16_t vx = 0;
+    int16_t vy = 0;
+    bool valid = false;
+};
+
+[[nodiscard]] inline constexpr bool MousePosValid( float X, float Y ) noexcept {
+    return X > -200.0f && X < 10000.0f && Y > -200.0f && Y < 10000.0f;
+}
+
+[[nodiscard]] inline constexpr bool MouseInWarpBounds( float Tx, float Ty, float Sw, float Sh ) noexcept {
+    return Tx > 1.0f && Ty > 1.0f && Tx < Sw + 200.0f && Ty < Sh + 200.0f;
+}
+
+[[nodiscard]] inline bool IsBufferPadding( const uint8_t* Buf, size_t Need ) noexcept {
+    if ( !Buf || !Need )
         return false;
     bool Cc = true;
     bool Zero = true;
@@ -282,6 +302,60 @@ inline bool RegionPad( uintptr_t Addr, size_t Need ) {
             Zero = false;
     }
     return Cc || Zero;
+}
+
+[[nodiscard]] inline bool IsThunkPrologue( const uint8_t* Head, size_t Size ) noexcept {
+    if ( !Head || Size < 6 )
+        return false;
+    return Head[ 0 ] == 0x48 && Head[ 1 ] == 0x83 && Head[ 2 ] == 0xEC && Head[ 3 ] == 0x68
+        && Head[ 4 ] == 0x49 && Head[ 5 ] == 0xBA;
+}
+
+[[nodiscard]] inline ScreenScale ScaleScreenCoords( float ScreenX, float ScreenY, int ViewW, int ViewH, int ClientW, int ClientH ) noexcept {
+    float Sw = ( float )( ViewW > 8 ? ViewW : ClientW );
+    float Sh = ( float )( ViewH > 8 ? ViewH : ClientH );
+    float Tx = ScreenX;
+    float Ty = ScreenY;
+    if ( ViewW > 8 && ClientW > 8 && ViewW != ClientW ) {
+        Tx *= ( float )ClientW / ( float )ViewW;
+        Ty *= ( float )ClientH / ( float )ViewH;
+        Sw = ( float )ClientW;
+        Sh = ( float )ClientH;
+    }
+    return { Tx, Ty, Sw, Sh };
+}
+
+[[nodiscard]] inline ViewWarpResult ComputeViewWarp( float Tx, float Ty, float Cx, float Cy, float Sw, float Sh ) noexcept {
+    if ( Sw < 8.0f || Sh < 8.0f )
+        return { 0, 0, false };
+    if ( Ty < 1.0f )
+        Ty = 1.0f;
+    if ( Ty > Sh - 1.0f )
+        Ty = Sh - 1.0f;
+    if ( Cy < 1.0f )
+        Cy = 1.0f;
+    if ( Cy > Sh - 1.0f )
+        Cy = Sh - 1.0f;
+    float Ratio = Cy / Ty;
+    float Vy = Sh * Ratio;
+    if ( Vy > 32767.0f )
+        Vy = 32767.0f;
+    if ( Vy < 1.0f )
+        Vy = 1.0f;
+    Ratio = Vy / Sh;
+    float Vx = 2.0f * Cx - Ratio * ( 2.0f * Tx - Sw );
+    if ( Vx > 32767.0f )
+        Vx = 32767.0f;
+    if ( Vx < 1.0f )
+        Vx = 1.0f;
+    return { ( int16_t )( Vx + 0.5f ), ( int16_t )( Vy + 0.5f ), true };
+}
+
+inline bool RegionPad( uintptr_t Addr, size_t Need ) {
+    uint8_t Buf[ 256 ];
+    if ( Need > sizeof( Buf ) || !world::Pull( Addr, Buf, Need ) )
+        return false;
+    return IsBufferPadding( Buf, Need );
 }
 
 inline uintptr_t FindCave( size_t Need ) {
@@ -387,7 +461,7 @@ inline bool MouseObjOk( uintptr_t Obj ) {
     float Pos[ 2 ] = { };
     if ( !world::Pull( Obj + world::Core( ).off.mousePos, Pos, sizeof( Pos ) ) )
         return false;
-    return Pos[ 0 ] > -200.0f && Pos[ 0 ] < 10000.0f && Pos[ 1 ] > -200.0f && Pos[ 1 ] < 10000.0f;
+    return MousePosValid( Pos[ 0 ], Pos[ 1 ] );
 }
 
 inline void RestoreView( ) {
@@ -412,8 +486,7 @@ inline bool LooksLikeThunk( uintptr_t Addr ) {
     uint8_t Head[ 6 ] = { };
     if ( !Addr || !world::Pull( Addr, Head, sizeof( Head ) ) )
         return false;
-    return Head[ 0 ] == 0x48 && Head[ 1 ] == 0x83 && Head[ 2 ] == 0xEC && Head[ 3 ] == 0x68
-        && Head[ 4 ] == 0x49 && Head[ 5 ] == 0xBA;
+    return IsThunkPrologue( Head, sizeof( Head ) );
 }
 
 inline bool ExtractOrig( uintptr_t Thunk, uintptr_t& Orig ) {
@@ -685,34 +758,17 @@ inline bool MouseAt( float X, float Y ) {
 
 inline bool WarpView( float Tx, float Ty, float Cx, float Cy, float Sw, float Sh ) {
     world::Engine& E = world::Core( );
-    if ( !E.off.camView || Sw < 8.0f || Sh < 8.0f )
+    if ( !E.off.camView )
         return false;
     if ( !world::EnsureWrite( ) )
         return false;
     uintptr_t Cam = Camera( );
     if ( !Cam )
         return false;
-    if ( Ty < 1.0f )
-        Ty = 1.0f;
-    if ( Ty > Sh - 1.0f )
-        Ty = Sh - 1.0f;
-    if ( Cy < 1.0f )
-        Cy = 1.0f;
-    if ( Cy > Sh - 1.0f )
-        Cy = Sh - 1.0f;
-    float Ratio = Cy / Ty;
-    float Vy = Sh * Ratio;
-    if ( Vy > 32767.0f )
-        Vy = 32767.0f;
-    if ( Vy < 1.0f )
-        Vy = 1.0f;
-    Ratio = Vy / Sh;
-    float Vx = 2.0f * Cx - Ratio * ( 2.0f * Tx - Sw );
-    if ( Vx > 32767.0f )
-        Vx = 32767.0f;
-    if ( Vx < 1.0f )
-        Vx = 1.0f;
-    int16_t Next[ 2 ] = { ( int16_t )( Vx + 0.5f ), ( int16_t )( Vy + 0.5f ) };
+    ViewWarpResult Warp = ComputeViewWarp( Tx, Ty, Cx, Cy, Sw, Sh );
+    if ( !Warp.valid )
+        return false;
+    int16_t Next[ 2 ] = { Warp.vx, Warp.vy };
     Hook& H = Live( );
     if ( !H.haveView || H.cam != Cam ) {
         int16_t Have[ 2 ] = { };
@@ -746,22 +802,13 @@ inline bool On( const world::Vec3& Target, float ScreenX, float ScreenY, bool Wa
     if ( !Warp )
         return Hooked;
     const world::Snap& Snap = world::View( );
-    float Sw = ( float )( Snap.viewW > 8 ? Snap.viewW : Snap.clientW );
-    float Sh = ( float )( Snap.viewH > 8 ? Snap.viewH : Snap.clientH );
-    float Tx = ScreenX;
-    float Ty = ScreenY;
-    if ( Snap.viewW > 8 && Snap.clientW > 8 && Snap.viewW != Snap.clientW ) {
-        Tx *= ( float )Snap.clientW / ( float )Snap.viewW;
-        Ty *= ( float )Snap.clientH / ( float )Snap.viewH;
-        Sw = ( float )Snap.clientW;
-        Sh = ( float )Snap.clientH;
-    }
-    float Cx = Sw * 0.5f;
-    float Cy = Sh * 0.5f;
+    ScreenScale Sc = ScaleScreenCoords( ScreenX, ScreenY, Snap.viewW, Snap.viewH, Snap.clientW, Snap.clientH );
+    float Cx = Sc.sw * 0.5f;
+    float Cy = Sc.sh * 0.5f;
     bool Mouse = false;
-    if ( Tx > 1.0f && Ty > 1.0f && Tx < Sw + 200.0f && Ty < Sh + 200.0f )
-        Mouse = MouseAt( Tx, Ty );
-    bool View = WarpView( Tx, Ty, Cx, Cy, Sw, Sh );
+    if ( MouseInWarpBounds( Sc.tx, Sc.ty, Sc.sw, Sc.sh ) )
+        Mouse = MouseAt( Sc.tx, Sc.ty );
+    bool View = WarpView( Sc.tx, Sc.ty, Cx, Cy, Sc.sw, Sc.sh );
     return Hooked || Mouse || View;
 }
 
