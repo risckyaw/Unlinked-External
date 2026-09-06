@@ -439,17 +439,10 @@ static void Gate( bool Over, const CVector& Point ) {
 static void Drag( const CRectangle& Bounds, const CVector& Point, float Across, float Vertical, float Wide, float Tall, bool AllowStart ) {
     bool Press = Held( VK_LBUTTON );
 
-    if ( Press && !Menu.mouse && AllowStart && Bounds.Contains( Point ) && !Menu.slide ) {
-        Menu.held = true;
-        Menu.grab = Point - Menu.origin;
-    }
-
-    if ( Menu.held ) {
-        if ( Press )
-            Menu.origin = Point - Menu.grab;
-        else
-            Menu.held = false;
-    }
+    bool CanStart = AllowStart && !Menu.mouse && Bounds.Contains( Point ) && !Menu.slide;
+    ui::UpdateDragState( Press, CanStart, Point.Horizontal, Point.Vertical,
+                         Menu.origin.Horizontal, Menu.origin.Vertical,
+                         Menu.grab.Horizontal, Menu.grab.Vertical, Menu.held );
 
     if ( !Press ) {
         Menu.slide = false;
@@ -1201,9 +1194,8 @@ static void PlaceExplore( float Across, float Vertical, float Scale ) {
     float Tall = ExploreHeight * Scale;
     float Gap = 16.0f * Scale;
     if ( !Tree.ready ) {
-        Tree.dock = CVector( MenuWidth * Scale + Gap, 0.0f );
-        if ( Menu.origin.Horizontal + Tree.dock.Horizontal + Wide > Across - 8.0f )
-            Tree.dock = CVector( -Wide - Gap, 0.0f );
+        float DockX = ui::ComputeDockOffset( Menu.origin.Horizontal, MenuWidth * Scale, Wide, Gap, Across, 8.0f );
+        Tree.dock = CVector( DockX, 0.0f );
         Tree.docked = true;
         Tree.ready = true;
     }
@@ -1214,27 +1206,22 @@ static void PlaceExplore( float Across, float Vertical, float Scale ) {
 
 static void DragExplore( const CRectangle& Bounds, const CVector& Point, float Across, float Vertical, float Wide, float Tall, bool AllowStart ) {
     bool Press = Held( VK_LBUTTON );
-    if ( Press && !Menu.mouse && AllowStart && !Menu.held && Bounds.Contains( Point ) && !Menu.slide ) {
-        Tree.held = true;
+    bool CanStart = AllowStart && !Menu.mouse && !Menu.held && Bounds.Contains( Point ) && !Menu.slide;
+    if ( Press && CanStart )
         Tree.docked = false;
-        Tree.grab = Point - Tree.origin;
-    }
 
-    if ( Tree.held ) {
-        if ( Press )
-            Tree.origin = Point - Tree.grab;
-        else
-            Tree.held = false;
-    }
+    ui::UpdateDragState( Press, CanStart, Point.Horizontal, Point.Vertical,
+                         Tree.origin.Horizontal, Tree.origin.Vertical,
+                         Tree.grab.Horizontal, Tree.grab.Vertical, Tree.held );
 
     ClampBox( Tree.origin, Across, Vertical, Wide, Tall );
 }
 
 static void ExploreChrome( const CRectangle& Bounds, float Scale, CRectangle& Header, CRectangle& Pane ) {
-    float Cap = HeaderHeight * Scale;
-    float Pad = 10.0f * Scale;
-    Header = CRectangle( Bounds.Left, Bounds.Top, Bounds.Width, Cap );
-    Pane = CRectangle( Bounds.Left + Pad, Header.Bottom( ) + Pad, Bounds.Width - Pad * 2.0f, Bounds.Height - Cap - Pad * 2.0f );
+    ui::RectBounds H, P;
+    ui::ComputePanelChrome( Bounds.Left, Bounds.Top, Bounds.Width, Bounds.Height, Scale, HeaderHeight, 10.0f, H, P );
+    Header = CRectangle( H.left, H.top, H.width, H.height );
+    Pane = CRectangle( P.left, P.top, P.width, P.height );
 }
 
 static void DrawCaret( CVector At, bool Down, float Scale, CColor Tint ) {
@@ -1611,16 +1598,10 @@ static CRectangle PlaceMark( float Across, float Vertical, float Scale, CFont* F
 
 static bool DragMark( const CRectangle& Chip, const CVector& Point, float Across, float Vertical, bool AllowStart ) {
     bool Press = Held( VK_LBUTTON );
-    if ( AllowStart && Press && !Menu.mouse && !Menu.held && !Tree.held && Chip.Contains( Point ) && !Menu.slide && !Listening( ) ) {
-        Badge.held = true;
-        Badge.grab = Point - Badge.origin;
-    }
-    if ( Badge.held ) {
-        if ( Press )
-            Badge.origin = Point - Badge.grab;
-        else
-            Badge.held = false;
-    }
+    bool CanStart = AllowStart && !Menu.mouse && !Menu.held && !Tree.held && Chip.Contains( Point ) && !Menu.slide && !Listening( );
+    ui::UpdateDragState( Press, CanStart, Point.Horizontal, Point.Vertical,
+                         Badge.origin.Horizontal, Badge.origin.Vertical,
+                         Badge.grab.Horizontal, Badge.grab.Vertical, Badge.held );
     ClampBox( Badge.origin, Across, Vertical, Chip.Width, Chip.Height );
     return Chip.Contains( Point ) || Badge.held;
 }
