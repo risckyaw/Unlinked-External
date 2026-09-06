@@ -98,6 +98,7 @@ add_executable( UnlinkedTests
     tests/test_sense.cpp
     tests/test_browse.cpp
     tests/test_catalog.cpp
+    tests/test_gameplay.cpp
 )
 target_link_libraries( UnlinkedTests PRIVATE winhttp )
 target_include_directories( UnlinkedTests PRIVATE src tests )

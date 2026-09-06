@@ -14,6 +14,19 @@
 
 namespace play {
 
+inline bool UpdateFramerateCap( std::string& Body, bool Uncap ) {
+    const char* Key = "<int name=\"FramerateCap\">";
+    size_t At = Body.find( Key );
+    if ( At == std::string::npos )
+        return false;
+    size_t Start = At + strlen( Key );
+    size_t End = Body.find( "</", Start );
+    if ( End == std::string::npos )
+        return false;
+    Body.replace( Start, End - Start, Uncap ? "10000" : "240" );
+    return true;
+}
+
 inline void PatchXml( bool Uncap ) {
     char Path[ MAX_PATH ] = { };
     char Root[ MAX_PATH ] = { };
@@ -35,15 +48,8 @@ inline void PatchXml( bool Uncap ) {
     }
     File.reset( );
 
-    const char* Key = "<int name=\"FramerateCap\">";
-    size_t At = Body.find( Key );
-    if ( At == std::string::npos )
+    if ( !UpdateFramerateCap( Body, Uncap ) )
         return;
-    size_t Start = At + strlen( Key );
-    size_t End = Body.find( "</", Start );
-    if ( End == std::string::npos )
-        return;
-    Body.replace( Start, End - Start, Uncap ? "10000" : "240" );
 
     File.reset( CreateFileA( Path, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr ) );
     if ( !File )
