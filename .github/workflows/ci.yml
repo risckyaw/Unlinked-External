@@ -35,6 +35,9 @@ jobs:
       - name: Build (${{ matrix.preset }})
         run: cmake --build --preset ${{ matrix.preset }}
 
+      - name: Run Tests (${{ matrix.preset }})
+        run: ctest --preset ${{ matrix.preset }} --output-on-failure
+
       - name: Upload Build Artifact (Release only)
         if: matrix.preset == 'windows-release' && github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@v4

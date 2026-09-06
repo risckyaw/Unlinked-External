@@ -7,7 +7,11 @@ if /i "%~1"=="-h" goto :help
 if /i "%~1"=="/?" goto :help
 
 set "PRESET=windows-release"
+set "RUN_TEST=0"
 if /i "%~1"=="--debug" set "PRESET=windows-debug"
+if /i "%~2"=="--debug" set "PRESET=windows-debug"
+if /i "%~1"=="--test" set "RUN_TEST=1"
+if /i "%~2"=="--test" set "RUN_TEST=1"
 
 set "VSDEV="
 if defined VSINSTALLDIR if exist "%VSINSTALLDIR%\Common7\Tools\VsDevCmd.bat" set "VSDEV=%VSINSTALLDIR%\Common7\Tools\VsDevCmd.bat"
@@ -74,6 +78,17 @@ if not exist "%OUT%" (
 )
 
 echo Built %OUT%
+
+if "%RUN_TEST%"=="1" (
+    echo.
+    echo Running unit tests...
+    ctest --preset %PRESET% --output-on-failure
+    if errorlevel 1 (
+        echo Error: unit tests failed.
+        exit /b 1
+    )
+)
+
 echo Run: "%~dp0%OUT%"
 exit /b 0
 
@@ -84,6 +99,8 @@ echo.
 echo Examples:
 echo   build.bat
 echo   build.bat --debug
+echo   build.bat --test
+echo   build.bat --debug --test
 echo.
 echo Output: build\windows-release\Unlinked.exe
 exit /b 0

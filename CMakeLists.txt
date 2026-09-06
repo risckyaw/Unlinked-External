@@ -72,3 +72,20 @@ add_custom_command( TARGET Unlinked POST_BUILD
         "$<TARGET_FILE_DIR:Unlinked>/assets/fonts/Inter-SemiBold.ttf"
 )
 
+enable_testing( )
+
+add_executable( UnlinkedTests
+    tests/test_main.cpp
+    tests/test_math.cpp
+    tests/test_store.cpp
+    tests/test_offsets.cpp
+)
+target_link_libraries( UnlinkedTests PRIVATE winhttp )
+target_include_directories( UnlinkedTests PRIVATE src tests )
+if( MSVC )
+    target_compile_options( UnlinkedTests PRIVATE /W4 /utf-8 /EHsc )
+endif( )
+
+add_test( NAME UnlinkedTests COMMAND UnlinkedTests )
+
+
