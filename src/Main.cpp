@@ -1838,10 +1838,12 @@ static void DrawWeather( float Across, float Vertical, float Scale ) {
 
     for ( int Index = 0; Index < Storm.used; Index++ ) {
         const weather::Drop& Item = Storm.list[ Index ];
-        if ( weather::mode( ) == weather::Snow )
+        if ( weather::mode( ) == weather::Snow ) {
             Canvas->Circle( CVector( Item.x, Item.y ), Item.size * Scale, Flake.Fade( 0.72f ) );
-        else
-            Canvas->Line( CVector( Item.x, Item.y ), CVector( Item.x + Item.vx * 0.018f, Item.y + Item.size ), Streak.Fade( 0.45f ), 1.1f * Scale );
+        } else {
+            weather::Point2D End = weather::ComputeRainStreakEnd( Item.x, Item.y, Item.vx, Item.size );
+            Canvas->Line( CVector( Item.x, Item.y ), CVector( End.x, End.y ), Streak.Fade( 0.45f ), 1.1f * Scale );
+        }
     }
     Canvas->Opacity = Keep;
 }

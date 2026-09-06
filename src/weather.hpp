@@ -59,10 +59,45 @@ inline const char* Name( int Index ) {
     return Names[ Index ];
 }
 
+inline float NextRand( uint32_t& Seed ) {
+    Seed = Seed * 1664525u + 1013904223u;
+    return ( float )( Seed >> 8 ) * ( 1.0f / 16777215.0f );
+}
+
 inline float Rand( ) {
-    State& S = Live( );
-    S.seed = S.seed * 1664525u + 1013904223u;
-    return ( float )( S.seed >> 8 ) * ( 1.0f / 16777215.0f );
+    return NextRand( Live( ).seed );
+}
+
+inline int TargetDropCount( int Mode ) {
+    if ( Mode == Snow )
+        return 80;
+    if ( Mode == Rain )
+        return 70;
+    return 0;
+}
+
+inline float ComputeSnowDrift( float Y, float Size ) {
+    return sinf( Y * 0.02f + Size ) * 18.0f;
+}
+
+inline bool IsDropOutOfBounds( float X, float Y, float Wide, float Tall, float Margin = 30.0f, float BottomMargin = 20.0f ) {
+    return Y > Tall + BottomMargin || X < -Margin || X > Wide + Margin;
+}
+
+inline void UpdateDrop( Drop& Item, int Mode, float Dt ) {
+    Item.x += Item.vx * Dt;
+    Item.y += Item.vy * Dt;
+    if ( Mode == Snow )
+        Item.x += ComputeSnowDrift( Item.y, Item.size ) * Dt;
+}
+
+struct Point2D {
+    float x = 0.0f;
+    float y = 0.0f;
+};
+
+inline Point2D ComputeRainStreakEnd( float X, float Y, float Vx, float Size, float ScaleTime = 0.018f ) {
+    return Point2D{ X + Vx * ScaleTime, Y + Size };
 }
 
 inline void Spawn( Drop& Item, int Kind, float Wide, float Tall, bool Fresh ) {
@@ -91,7 +126,7 @@ inline void Tick( float Dt, float Wide, float Tall ) {
         return;
     }
 
-    int Want = ( S.mode == Snow ) ? 80 : 70;
+    int Want = TargetDropCount( S.mode );
     if ( S.used > Want )
         S.used = Want;
     while ( S.used < Want )
@@ -99,11 +134,8 @@ inline void Tick( float Dt, float Wide, float Tall ) {
 
     for ( int Index = 0; Index < S.used; Index++ ) {
         Drop& Item = S.list[ Index ];
-        Item.x += Item.vx * Dt;
-        Item.y += Item.vy * Dt;
-        if ( S.mode == Snow )
-            Item.x += sinf( Item.y * 0.02f + Item.size ) * 18.0f * Dt;
-        if ( Item.y > Tall + 20.0f || Item.x < -30.0f || Item.x > Wide + 30.0f )
+        UpdateDrop( Item, S.mode, Dt );
+        if ( IsDropOutOfBounds( Item.x, Item.y, Wide, Tall ) )
             Spawn( Item, S.mode, Wide, Tall, false );
     }
 }
