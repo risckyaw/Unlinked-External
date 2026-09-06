@@ -60,7 +60,25 @@ inline bool VisWorks( ) {
     return VisHow( ) != VisNone;
 }
 
+inline const char*& CustomRoot( ) {
+    static const char* Path = nullptr;
+    return Path;
+}
+
+inline void SetCustomRoot( const char* Path ) {
+    CustomRoot( ) = Path;
+}
+
 inline bool Folder( char* Out, int Cap ) {
+    if ( !Out || Cap <= 0 )
+        return false;
+    if ( CustomRoot( ) ) {
+        int Res = snprintf( Out, Cap, "%s", CustomRoot( ) );
+        if ( Res <= 0 || Res >= Cap )
+            return false;
+        CreateDirectoryA( Out, nullptr );
+        return true;
+    }
     char App[ MAX_PATH ] = { };
     if ( FAILED( SHGetFolderPathA( nullptr, CSIDL_APPDATA, nullptr, SHGFP_TYPE_CURRENT, App ) ) )
         return false;
@@ -71,12 +89,74 @@ inline bool Folder( char* Out, int Cap ) {
     return true;
 }
 
+[[nodiscard]] inline bool FormatGameFilePath( const char* Dir, uint64_t Place, const char* Kind, char* Out, int Cap ) noexcept {
+    if ( !Dir || !Dir[ 0 ] || !Place || !Kind || !Kind[ 0 ] || !Out || Cap <= 0 )
+        return false;
+    int Res = snprintf( Out, Cap, "%s\\%llu.%s", Dir, ( unsigned long long )Place, Kind );
+    return Res > 0 && Res < Cap;
+}
+
 inline bool PathOf( uint64_t Place, const char* Kind, char* Out, int Cap ) {
     char Dir[ MAX_PATH ] = { };
-    if ( !Folder( Dir, MAX_PATH ) || !Place || !Kind )
+    if ( !Folder( Dir, MAX_PATH ) )
         return false;
-    snprintf( Out, Cap, "%s\\%llu.%s", Dir, ( unsigned long long )Place, Kind );
-    return true;
+    return FormatGameFilePath( Dir, Place, Kind, Out, Cap );
+}
+
+[[nodiscard]] inline bool ExtractMethodValue( const char* Body, char* Method, int Cap ) noexcept {
+    if ( Method && Cap > 0 )
+        Method[ 0 ] = 0;
+    if ( !Body || !Method || Cap <= 0 )
+        return false;
+    const char* At = strstr( Body, "method=" );
+    if ( !At )
+        return false;
+    At += 7;
+    int Write = 0;
+    while ( At[ Write ] && At[ Write ] != '\r' && At[ Write ] != '\n' && Write < Cap - 1 ) {
+        Method[ Write ] = At[ Write ];
+        Write++;
+    }
+    Method[ Write ] = 0;
+    return Method[ 0 ] != 0;
+}
+
+[[nodiscard]] constexpr int DecideTeamMethod( int PtrN, int NameN, int ColorN, int Teamed ) noexcept {
+    if ( PtrN >= 2 || ( Teamed > 0 && PtrN >= 1 ) )
+        return TeamPtr;
+    if ( NameN >= 2 )
+        return TeamName;
+    if ( ColorN >= 2 )
+        return TeamColor;
+    return TeamNone;
+}
+
+[[nodiscard]] constexpr int DecideVisMethod( int Walls ) noexcept {
+    if ( Walls >= 6 )
+        return VisRay;
+    return VisAuto;
+}
+
+[[nodiscard]] constexpr bool IsVisReady( int Walls ) noexcept {
+    return Walls >= 6;
+}
+
+[[nodiscard]] constexpr bool ShouldThrottleDecision( bool Ready, unsigned Now, unsigned NextTick ) noexcept {
+    return Ready && ( Now < NextTick );
+}
+
+inline bool FormatExtraTeamInfo( int PtrN, int NameN, int ColorN, int Teamed, char* Out, int Cap ) noexcept {
+    if ( !Out || Cap <= 0 )
+        return false;
+    int Res = snprintf( Out, Cap, "ptrs=%d names=%d colors=%d teamed=%d", PtrN, NameN, ColorN, Teamed );
+    return Res > 0 && Res < Cap;
+}
+
+inline bool FormatExtraVisInfo( int Walls, char* Out, int Cap ) noexcept {
+    if ( !Out || Cap <= 0 )
+        return false;
+    int Res = snprintf( Out, Cap, "walls=%d", Walls );
+    return Res > 0 && Res < Cap;
 }
 
 inline const char* TeamWord( int How ) {
@@ -132,17 +212,7 @@ inline bool LoadKind( uint64_t Place, const char* Kind, char* Method, int Cap ) 
     size_t Got = fread( Body, 1, sizeof( Body ) - 1, File );
     fclose( File );
     Body[ Got ] = 0;
-    const char* At = strstr( Body, "method=" );
-    if ( !At || !Method )
-        return false;
-    At += 7;
-    int Write = 0;
-    while ( At[ Write ] && At[ Write ] != '\r' && At[ Write ] != '\n' && Write < Cap - 1 ) {
-        Method[ Write ] = At[ Write ];
-        Write++;
-    }
-    Method[ Write ] = 0;
-    return Method[ 0 ] != 0;
+    return ExtractMethodValue( Body, Method, Cap );
 }
 
 inline void SaveKind( uint64_t Place, const char* Kind, const char* Method, const char* Extra ) {
@@ -191,20 +261,14 @@ inline void DecideTeam( uint64_t Place, int PtrN, int NameN, int ColorN, int Tea
         return;
     BindPlace( Place );
     unsigned Now = GetTickCount( );
-    if ( S.teamReady && Now < S.nextTeam )
+    if ( ShouldThrottleDecision( S.teamReady, Now, S.nextTeam ) )
         return;
     S.nextTeam = Now + 8000;
-    int How = TeamNone;
-    if ( PtrN >= 2 || ( Teamed > 0 && PtrN >= 1 ) )
-        How = TeamPtr;
-    else if ( NameN >= 2 )
-        How = TeamName;
-    else if ( ColorN >= 2 )
-        How = TeamColor;
+    int How = DecideTeamMethod( PtrN, NameN, ColorN, Teamed );
     S.teamHow = How;
     S.teamReady = true;
     char Extra[ 80 ];
-    snprintf( Extra, sizeof( Extra ), "ptrs=%d names=%d colors=%d teamed=%d", PtrN, NameN, ColorN, Teamed );
+    FormatExtraTeamInfo( PtrN, NameN, ColorN, Teamed, Extra, sizeof( Extra ) );
     SaveKind( Place, "team", TeamWord( How ), Extra );
 }
 
@@ -214,19 +278,16 @@ inline void DecideVis( uint64_t Place, int Walls ) {
         return;
     BindPlace( Place );
     unsigned Now = GetTickCount( );
-    if ( S.visReady && Now < S.nextVis )
+    if ( ShouldThrottleDecision( S.visReady, Now, S.nextVis ) )
         return;
     S.nextVis = Now + 8000;
-    if ( Walls >= 6 ) {
-        S.visHow = VisRay;
-        S.visReady = true;
+    S.visHow = DecideVisMethod( Walls );
+    S.visReady = IsVisReady( Walls );
+    if ( S.visReady ) {
         char Extra[ 48 ];
-        snprintf( Extra, sizeof( Extra ), "walls=%d", Walls );
-        SaveKind( Place, "vis", VisWord( VisRay ), Extra );
-        return;
+        FormatExtraVisInfo( Walls, Extra, sizeof( Extra ) );
+        SaveKind( Place, "vis", VisWord( S.visHow ), Extra );
     }
-    S.visHow = VisAuto;
-    S.visReady = false;
 }
 
 }
