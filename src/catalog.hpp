@@ -16,6 +16,42 @@ namespace skin {
 inline constexpr int ToneCount = 3;
 inline constexpr int LookCount = 6;
 
+[[nodiscard]] constexpr int ClampToneIndex( int Index ) noexcept {
+    if ( Index < 0 || Index >= ToneCount )
+        return 0;
+    return Index;
+}
+
+[[nodiscard]] constexpr int ClampLookIndex( int Index ) noexcept {
+    if ( Index < 0 || Index >= LookCount )
+        return 0;
+    return Index;
+}
+
+[[nodiscard]] constexpr int ClampAtmosphereIndex( int Index ) noexcept {
+    if ( Index < 1 || Index >= LookCount )
+        return 1;
+    return Index;
+}
+
+[[nodiscard]] inline bool FormatShaderTint( const char* Source, const float Deep[ 3 ], const float Mid[ 3 ], const float High[ 3 ], char* Out, size_t Cap ) noexcept {
+    if ( !Source || !Deep || !Mid || !High || !Out || Cap == 0 )
+        return false;
+    int Res = snprintf( Out, Cap,
+        "%s\n"
+        "float Lum = dot( Final.rgb, Float3( 0.30, 0.54, 0.16 ) );\n"
+        "Float3 Deep = Float3( %.4f, %.4f, %.4f );\n"
+        "Float3 Mid = Float3( %.4f, %.4f, %.4f );\n"
+        "Float3 High = Float3( %.4f, %.4f, %.4f );\n"
+        "Float3 Tint = Lerp( Deep, Mid, Saturate( Lum * 1.55 ) );\n"
+        "Final.rgb = Saturate( Lerp( Tint, High, pow( Saturate( Lum ), 2.2 ) ) );\n",
+        Source,
+        ( double )Deep[ 0 ], ( double )Deep[ 1 ], ( double )Deep[ 2 ],
+        ( double )Mid[ 0 ], ( double )Mid[ 1 ], ( double )Mid[ 2 ],
+        ( double )High[ 0 ], ( double )High[ 1 ], ( double )High[ 2 ] );
+    return Res > 0 && ( size_t )Res < Cap;
+}
+
 inline int& tone( ) {
     static int Selected = 0;
     return Selected;
@@ -28,18 +64,14 @@ inline int& look( ) {
 
 inline const char* toneName( int Index ) {
     static const char* Names[ ToneCount ] = { "Dark Knight", "Coffee", "Matcha" };
-    if ( Index < 0 || Index >= ToneCount )
-        Index = 0;
-    return Names[ Index ];
+    return Names[ ClampToneIndex( Index ) ];
 }
 
 inline const char* lookName( int Index ) {
     static const char* Names[ LookCount ] = {
         "Ice", "Thunder", "Ether", "Snow", "Bends", "Clouds"
     };
-    if ( Index < 0 || Index >= LookCount )
-        Index = 0;
-    return Names[ Index ];
+    return Names[ ClampLookIndex( Index ) ];
 }
 
 inline const float* deep( int Index ) {
@@ -48,9 +80,7 @@ inline const float* deep( int Index ) {
         { 0.055f, 0.028f, 0.016f },
         { 0.020f, 0.038f, 0.018f }
     };
-    if ( Index < 0 || Index >= ToneCount )
-        Index = 0;
-    return Set[ Index ];
+    return Set[ ClampToneIndex( Index ) ];
 }
 
 inline const float* mid( int Index ) {
@@ -59,9 +89,7 @@ inline const float* mid( int Index ) {
         { 0.22f, 0.12f, 0.06f },
         { 0.08f, 0.16f, 0.07f }
     };
-    if ( Index < 0 || Index >= ToneCount )
-        Index = 0;
-    return Set[ Index ];
+    return Set[ ClampToneIndex( Index ) ];
 }
 
 inline const float* high( int Index ) {
@@ -70,9 +98,7 @@ inline const float* high( int Index ) {
         { 0.55f, 0.38f, 0.20f },
         { 0.28f, 0.48f, 0.26f }
     };
-    if ( Index < 0 || Index >= ToneCount )
-        Index = 0;
-    return Set[ Index ];
+    return Set[ ClampToneIndex( Index ) ];
 }
 
 inline const char* Atmosphere( int Index ) {
@@ -183,39 +209,23 @@ float Soft = pow( Saturate( N * 1.2 ), 1.55 );
 Final.rgb = Saturate( Lerp( Float3( 0.08, 0.11, 0.16 ), Float3( 0.78, 0.84, 0.92 ), Soft ) );
 )"
     };
-    if ( Index < 1 || Index >= LookCount )
-        return Bodies[ 1 ];
-    return Bodies[ Index ];
+    return Bodies[ ClampAtmosphereIndex( Index ) ];
 }
 
 inline const char* Tinted( const char* Source, int Tone ) {
     static char Body[ 8192 ] = { };
-    const float* Deep = deep( Tone );
-    const float* Mid = mid( Tone );
-    const float* High = high( Tone );
-    snprintf( Body, sizeof( Body ),
-        "%s\n"
-        "float Lum = dot( Final.rgb, Float3( 0.30, 0.54, 0.16 ) );\n"
-        "Float3 Deep = Float3( %.4f, %.4f, %.4f );\n"
-        "Float3 Mid = Float3( %.4f, %.4f, %.4f );\n"
-        "Float3 High = Float3( %.4f, %.4f, %.4f );\n"
-        "Float3 Tint = Lerp( Deep, Mid, Saturate( Lum * 1.55 ) );\n"
-        "Final.rgb = Saturate( Lerp( Tint, High, pow( Saturate( Lum ), 2.2 ) ) );\n",
-        Source,
-        ( double )Deep[ 0 ], ( double )Deep[ 1 ], ( double )Deep[ 2 ],
-        ( double )Mid[ 0 ], ( double )Mid[ 1 ], ( double )Mid[ 2 ],
-        ( double )High[ 0 ], ( double )High[ 1 ], ( double )High[ 2 ] );
+    int Clamped = ClampToneIndex( Tone );
+    const float* Deep = deep( Clamped );
+    const float* Mid = mid( Clamped );
+    const float* High = high( Clamped );
+    ( void )FormatShaderTint( Source, Deep, Mid, High, Body, sizeof( Body ) );
     return Body;
 }
 
 inline unsigned int effect( ) {
     static unsigned int Handles[ LookCount ][ ToneCount ] = { };
-    int Look = look( );
-    int Tone = tone( );
-    if ( Look < 0 || Look >= LookCount )
-        Look = 0;
-    if ( Tone < 0 || Tone >= ToneCount )
-        Tone = 0;
+    int Look = ClampLookIndex( look( ) );
+    int Tone = ClampToneIndex( tone( ) );
 #if __has_include("Shaders.h")
     if ( Handles[ Look ][ Tone ] == 0 ) {
         const float* Deep = deep( Tone );

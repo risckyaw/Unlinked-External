@@ -8,23 +8,19 @@
 #include <chrono>
 #include <cstdio>
 
-inline const char* IceMetal( float Dr, float Dg, float Db, float Mr, float Mg, float Mb, float Hr, float Hg, float Hb ) {
-    static char Body[ 2800 ] = { };
-    static float ShiftX = 0.0f;
-    static float ShiftY = 0.0f;
-    static float Twist = 0.0f;
-    static float Grain = 1.7f;
-    static bool Seeded = false;
-    if ( !Seeded ) {
-        unsigned long long Tick = ( unsigned long long )std::chrono::high_resolution_clock::now( ).time_since_epoch( ).count( );
-        ShiftX = ( float )( Tick % 997ull ) * 0.041f;
-        ShiftY = ( float )( ( Tick / 997ull ) % 991ull ) * 0.037f;
-        Twist = ( float )( Tick % 628ull ) * 0.01f;
-        Grain = 1.7f + ( float )( Tick % 80ull ) * 0.01f;
-        Seeded = true;
-    }
+namespace ice {
 
-    snprintf( Body, sizeof( Body ),
+inline void ComputeIceSeedParams( unsigned long long Tick, float& ShiftX, float& ShiftY, float& Twist, float& Grain ) noexcept {
+    ShiftX = ( float )( Tick % 997ull ) * 0.041f;
+    ShiftY = ( float )( ( Tick / 997ull ) % 991ull ) * 0.037f;
+    Twist = ( float )( Tick % 628ull ) * 0.01f;
+    Grain = 1.7f + ( float )( Tick % 80ull ) * 0.01f;
+}
+
+[[nodiscard]] inline bool FormatIceMetalShader( float ShiftX, float ShiftY, float Twist, float Grain, const float Deep[ 3 ], const float Mid[ 3 ], const float High[ 3 ], char* Out, size_t Cap ) noexcept {
+    if ( !Deep || !Mid || !High || !Out || Cap == 0 )
+        return false;
+    int Res = snprintf( Out, Cap,
         "Float2 Uv = Screen * Float2( 0.0026, 0.0115 ) + Float2( %.4f, %.4f );\n"
         "float Time = Moment * 0.055;\n"
         "Float2 P = Uv;\n"
@@ -46,9 +42,29 @@ inline const char* IceMetal( float Dr, float Dg, float Db, float Mr, float Mg, f
         "Tint = Lerp( Tint, High, Rim * 0.55 );\n"
         "Final.rgb = Saturate( Tint );\n",
         ( double )ShiftX, ( double )ShiftY, ( double )Twist, ( double )Twist, ( double )Grain,
-        ( double )Dr, ( double )Dg, ( double )Db,
-        ( double )Mr, ( double )Mg, ( double )Mb,
-        ( double )Hr, ( double )Hg, ( double )Hb );
+        ( double )Deep[ 0 ], ( double )Deep[ 1 ], ( double )Deep[ 2 ],
+        ( double )Mid[ 0 ], ( double )Mid[ 1 ], ( double )Mid[ 2 ],
+        ( double )High[ 0 ], ( double )High[ 1 ], ( double )High[ 2 ] );
+    return Res > 0 && ( size_t )Res < Cap;
+}
 
+}
+
+inline const char* IceMetal( float Dr, float Dg, float Db, float Mr, float Mg, float Mb, float Hr, float Hg, float Hb ) {
+    static char Body[ 2800 ] = { };
+    static float ShiftX = 0.0f;
+    static float ShiftY = 0.0f;
+    static float Twist = 0.0f;
+    static float Grain = 1.7f;
+    static bool Seeded = false;
+    if ( !Seeded ) {
+        unsigned long long Tick = ( unsigned long long )std::chrono::high_resolution_clock::now( ).time_since_epoch( ).count( );
+        ice::ComputeIceSeedParams( Tick, ShiftX, ShiftY, Twist, Grain );
+        Seeded = true;
+    }
+    const float Deep[ 3 ] = { Dr, Dg, Db };
+    const float Mid[ 3 ] = { Mr, Mg, Mb };
+    const float High[ 3 ] = { Hr, Hg, Hb };
+    ( void )ice::FormatIceMetalShader( ShiftX, ShiftY, Twist, Grain, Deep, Mid, High, Body, sizeof( Body ) );
     return Body;
 }
