@@ -555,16 +555,13 @@ static void DrawTitle( const CRectangle& Header, float Scale, const char* Title 
 }
 
 static CRectangle TabBounds( const CRectangle& Rail, float Scale, int Index ) {
-    float Step = TabHeight * Scale + TabGap * Scale;
-    return CRectangle( Rail.Left, Rail.Top + Step * ( float )Index, Rail.Width, TabHeight * Scale );
+    ui::RectBounds B = ui::ComputeTabBounds( Rail.Left, Rail.Top, Rail.Width, TabHeight, TabGap, Scale, Index );
+    return CRectangle( B.left, B.top, B.width, B.height );
 }
 
 static CRectangle TabPlate( const CRectangle& Tab, bool Top, bool Bot, float Round ) {
-    if ( Top && !Bot )
-        return CRectangle( Tab.Left, Tab.Top, Tab.Width, Tab.Height + Round );
-    if ( Bot && !Top )
-        return CRectangle( Tab.Left, Tab.Top - Round, Tab.Width, Tab.Height + Round );
-    return Tab;
+    ui::RectBounds B = ui::ComputeTabPlate( { Tab.Left, Tab.Top, Tab.Width, Tab.Height }, Top, Bot, Round );
+    return CRectangle( B.left, B.top, B.width, B.height );
 }
 
 static void DrawTabPlate( const CRectangle& Tab, int Index, float Round, CColor Fill, unsigned int Effect, float Amount ) {
@@ -635,8 +632,8 @@ static void DrawTab( const CRectangle& Tab, const TabSpec& Spec, int Index, floa
 }
 
 static CRectangle CloseBounds( const CRectangle& Header, float Scale ) {
-    float Size = 32.0f * Scale;
-    return CRectangle( Header.Right( ) - Size - 8.0f * Scale, Header.Top + ( Header.Height - Size ) * 0.5f, Size, Size );
+    ui::RectBounds B = ui::ComputeCloseBounds( Header.Right( ), Header.Top, Header.Height, Scale, 32.0f, 8.0f );
+    return CRectangle( B.left, B.top, B.width, B.height );
 }
 
 static bool DrawClose( const CRectangle& Header, const CVector& Point, bool Click, float Scale, const char* Motion, bool Exit ) {
@@ -665,11 +662,7 @@ static bool Listening( ) {
 }
 
 static bool DrawSlider( float Left, float Top, float Wide, const char* Label, const char* Id, float& Value, float Lo, float Hi, const CVector& Point, bool Click, bool Press, float Scale ) {
-    if ( Value < Lo )
-        Value = Lo;
-    if ( Value > Hi )
-        Value = Hi;
-    Value = ( float )( int )( Value + 0.5f );
+    Value = ui::ClampSliderValue( Value, Lo, Hi );
 
     float Row = 26.0f * Scale;
     float TextW = 0.0f;
@@ -682,9 +675,7 @@ static bool DrawSlider( float Left, float Top, float Wide, const char* Label, co
     snprintf( Stamp, sizeof( Stamp ), "%d", ( int )Value );
     CVector Size = Font->Measure( Stamp );
     float Thumb = 14.0f * Scale;
-    float GrooveW = Wide - TextW - Size.Horizontal - Thumb - 18.0f * Scale;
-    if ( GrooveW < 48.0f * Scale )
-        GrooveW = 48.0f * Scale;
+    float GrooveW = ui::ComputeGrooveWidth( Wide, TextW, Size.Horizontal, Thumb, Scale );
     CRectangle Groove( Left + TextW, Top + 10.0f * Scale, GrooveW, 6.0f * Scale );
     CRectangle Hit( Left, Top, Wide, Row );
     bool Mine = Menu.slide && Menu.knob == Id;
@@ -699,20 +690,11 @@ static bool DrawSlider( float Left, float Top, float Wide, const char* Label, co
         Menu.knob = nullptr;
         Mine = false;
     }
-    if ( Mine && Groove.Width > 1.0f ) {
-        float Ratio = ( Point.Horizontal - Groove.Left ) / Groove.Width;
-        if ( Ratio < 0.0f )
-            Ratio = 0.0f;
-        if ( Ratio > 1.0f )
-            Ratio = 1.0f;
-        Value = ( float )( int )( Lo + Ratio * ( Hi - Lo ) + 0.5f );
+    if ( Mine ) {
+        Value = ui::ComputeSliderValueFromPoint( Point.Horizontal, Groove.Left, Groove.Width, Lo, Hi );
     }
 
-    float Portion = ( Value - Lo ) / ( Hi - Lo );
-    if ( Portion < 0.0f )
-        Portion = 0.0f;
-    if ( Portion > 1.0f )
-        Portion = 1.0f;
+    float Portion = ui::ComputeSliderRatio( Value, Lo, Hi );
     Canvas->Text( CVector( Groove.Right( ) + Thumb * 0.5f + 10.0f * Scale, Top + ( Row - Font->LineSpan ) * 0.5f ), Style->Text, Stamp );
     Canvas->Rectangle( Groove, Dress.groove, 2.5f * Scale );
     if ( Portion > 0.0f )
@@ -741,18 +723,19 @@ static bool DrawBind( float Left, float Top, const char* Label, const char* Moti
 }
 
 static bool DrawSwitch( const CRectangle& Row, const char* Label, const char* Id, bool& Value, const CVector& Point, bool Click, float Scale ) {
-    float TrackW = 44.0f * Scale;
-    float TrackH = 22.0f * Scale;
-    CRectangle Track( Row.Right( ) - TrackW, Row.Top + ( Row.Height - TrackH ) * 0.5f, TrackW, TrackH );
+    ui::RectBounds TrackB;
+    ui::ComputeSwitchTrack( Row.Right( ), Row.Top, Row.Height, Scale, TrackB );
+    CRectangle Track( TrackB.left, TrackB.top, TrackB.width, TrackB.height );
     bool Over = Row.Contains( Point ) && !Moving( ) && !Menu.slide;
     if ( Over && Click )
         Value = !Value;
 
     float On = ur::motion::toward( Id, Value ? 1.0f : 0.0f, 28.0f );
     Canvas->Text( CVector( Row.Left, Row.Top + ( Row.Height - Font->LineSpan ) * 0.5f ), Style->Text, Label );
-    Canvas->Rectangle( Track, Mix( Dress.trackOff, Mix( Dress.trackOn, Style->Accent, 0.4f ), On ), TrackH * 0.5f );
-    float Knob = 18.0f * Scale;
-    Canvas->Rectangle( CRectangle( Track.Left + 2.0f * Scale + ( TrackW - Knob - 4.0f * Scale ) * On, Track.Top + ( TrackH - Knob ) * 0.5f, Knob, Knob ), Dress.inkHot, Knob * 0.5f );
+    Canvas->Rectangle( Track, Mix( Dress.trackOff, Mix( Dress.trackOn, Style->Accent, 0.4f ), On ), TrackB.height * 0.5f );
+    ui::RectBounds KnobB;
+    ui::ComputeSwitchKnob( TrackB, Scale, On, KnobB );
+    Canvas->Rectangle( CRectangle( KnobB.left, KnobB.top, KnobB.width, KnobB.height ), Dress.inkHot, KnobB.width * 0.5f );
     return Over;
 }
 
@@ -791,13 +774,10 @@ static bool DrawFold( float Left, float Top, float Wide, float Head, float BodyN
 static CRectangle DropListBox( float Scale ) {
     if ( !DropId || DropCount <= 0 )
         return CRectangle( );
-    float Item = 26.0f * Scale;
-    float Tall = Item * ( float )DropCount + 6.0f * Scale;
-    float Top = DropField.Bottom( ) + 4.0f * Scale;
-    float Limit = ( float )ur::app::height( ) - 8.0f * Scale;
-    if ( Top + Tall > Limit )
-        Top = DropField.Top - 4.0f * Scale - Tall;
-    return CRectangle( DropField.Left, Top, DropField.Width, Tall );
+    ui::RectBounds B;
+    if ( !ui::ComputeDropListBox( DropField.Left, DropField.Top, DropField.Bottom( ), DropField.Width, DropCount, ( float )ur::app::height( ), Scale, B ) )
+        return CRectangle( );
+    return CRectangle( B.left, B.top, B.width, B.height );
 }
 
 static bool DropHit( const CVector& Point, float Scale ) {
@@ -807,8 +787,7 @@ static bool DropHit( const CVector& Point, float Scale ) {
 }
 
 static bool DrawDrop( float Left, float Top, float Wide, const char* Label, const char* Id, const char* const* Options, int Count, int& Pick, const CVector& Point, bool Click, float Scale ) {
-    if ( Pick < 0 || Pick >= Count )
-        Pick = 0;
+    Pick = ui::ValidatePickIndex( Pick, Count );
     if ( Label ) {
         Canvas->Text( CVector( Left, Top ), Style->Faint, Label );
         Top += Font->LineSpan + 4.0f * Scale;
@@ -1222,17 +1201,14 @@ static void ExploreChrome( const CRectangle& Bounds, float Scale, CRectangle& He
 }
 
 static void DrawCaret( CVector At, bool Down, float Scale, CColor Tint ) {
-    float Span = 3.6f * Scale;
-    CVector Tips[ 3 ];
-    if ( Down ) {
-        Tips[ 0 ] = CVector( At.Horizontal - Span, At.Vertical - Span * 0.45f );
-        Tips[ 1 ] = CVector( At.Horizontal + Span, At.Vertical - Span * 0.45f );
-        Tips[ 2 ] = CVector( At.Horizontal, At.Vertical + Span * 0.75f );
-    } else {
-        Tips[ 0 ] = CVector( At.Horizontal - Span * 0.35f, At.Vertical - Span );
-        Tips[ 1 ] = CVector( At.Horizontal + Span * 0.8f, At.Vertical );
-        Tips[ 2 ] = CVector( At.Horizontal - Span * 0.35f, At.Vertical + Span );
-    }
+    float TipsX[ 3 ] = { };
+    float TipsY[ 3 ] = { };
+    ui::ComputeCaretTips( At.Horizontal, At.Vertical, Down, Scale, TipsX, TipsY );
+    CVector Tips[ 3 ] = {
+        CVector( TipsX[ 0 ], TipsY[ 0 ] ),
+        CVector( TipsX[ 1 ], TipsY[ 1 ] ),
+        CVector( TipsX[ 2 ], TipsY[ 2 ] )
+    };
     Canvas->Polygon( Tips, 3, Tint );
 }
 

@@ -195,4 +195,128 @@ TEST_CASE( "Layout: ComputeBadgeSize padding and scale" ) {
     CHECK_CLOSE( Tall, 41.0f, 0.001f );
 }
 
+TEST_CASE( "Layout: Slider clamping, ratio, and value from point" ) {
+    // Clamping
+    CHECK_CLOSE( ui::ClampSliderValue( -10.0f, 0.0f, 100.0f ), 0.0f, 0.001f );
+    CHECK_CLOSE( ui::ClampSliderValue( 115.0f, 0.0f, 100.0f ), 100.0f, 0.001f );
+    CHECK_CLOSE( ui::ClampSliderValue( 49.6f, 0.0f, 100.0f ), 50.0f, 0.001f );
+
+    // Ratio
+    CHECK_CLOSE( ui::ComputeSliderRatio( 50.0f, 0.0f, 100.0f ), 0.5f, 0.001f );
+    CHECK_CLOSE( ui::ComputeSliderRatio( -10.0f, 0.0f, 100.0f ), 0.0f, 0.001f );
+    CHECK_CLOSE( ui::ComputeSliderRatio( 150.0f, 0.0f, 100.0f ), 1.0f, 0.001f );
+    CHECK_CLOSE( ui::ComputeSliderRatio( 50.0f, 50.0f, 50.0f ), 0.0f, 0.001f );
+
+    // Value from Point
+    float ValMid = ui::ComputeSliderValueFromPoint( 150.0f, 100.0f, 100.0f, 0.0f, 100.0f );
+    CHECK_CLOSE( ValMid, 50.0f, 0.001f );
+
+    float ValLeft = ui::ComputeSliderValueFromPoint( 50.0f, 100.0f, 100.0f, 0.0f, 100.0f );
+    CHECK_CLOSE( ValLeft, 0.0f, 0.001f );
+
+    float ValRight = ui::ComputeSliderValueFromPoint( 250.0f, 100.0f, 100.0f, 0.0f, 100.0f );
+    CHECK_CLOSE( ValRight, 100.0f, 0.001f );
+}
+
+TEST_CASE( "Layout: ComputeGrooveWidth calculation" ) {
+    float W = ui::ComputeGrooveWidth( 300.0f, 50.0f, 20.0f, 14.0f, 1.0f );
+    // 300 - 50 - 20 - 14 - 18 = 198
+    CHECK_CLOSE( W, 198.0f, 0.001f );
+
+    // Tiny width clamps to 48 * Scale
+    float SmallW = ui::ComputeGrooveWidth( 50.0f, 50.0f, 20.0f, 14.0f, 1.0f );
+    CHECK_CLOSE( SmallW, 48.0f, 0.001f );
+}
+
+TEST_CASE( "Layout: ComputeTabBounds and ComputeTabPlate" ) {
+    ui::RectBounds Tab = ui::ComputeTabBounds( 0.0f, 50.0f, 80.0f, 70.0f, 0.0f, 1.0f, 2 );
+    CHECK_CLOSE( Tab.left, 0.0f, 0.001f );
+    CHECK_CLOSE( Tab.top, 190.0f, 0.001f );
+    CHECK_CLOSE( Tab.width, 80.0f, 0.001f );
+    CHECK_CLOSE( Tab.height, 70.0f, 0.001f );
+
+    // TabPlate Top only
+    ui::RectBounds PlateTop = ui::ComputeTabPlate( Tab, true, false, 12.0f );
+    CHECK_CLOSE( PlateTop.top, 190.0f, 0.001f );
+    CHECK_CLOSE( PlateTop.height, 82.0f, 0.001f );
+
+    // TabPlate Bot only
+    ui::RectBounds PlateBot = ui::ComputeTabPlate( Tab, false, true, 12.0f );
+    CHECK_CLOSE( PlateBot.top, 178.0f, 0.001f );
+    CHECK_CLOSE( PlateBot.height, 82.0f, 0.001f );
+}
+
+TEST_CASE( "Layout: ComputeCloseBounds positioning and scale" ) {
+    ui::RectBounds Close = ui::ComputeCloseBounds( 700.0f, 0.0f, 52.0f, 1.0f, 32.0f, 8.0f );
+    CHECK_CLOSE( Close.left, 660.0f, 0.001f );
+    CHECK_CLOSE( Close.top, 10.0f, 0.001f );
+    CHECK_CLOSE( Close.width, 32.0f, 0.001f );
+    CHECK_CLOSE( Close.height, 32.0f, 0.001f );
+}
+
+TEST_CASE( "Layout: ComputeCaretTips downward and rightward" ) {
+    float TipsX[ 3 ] = { };
+    float TipsY[ 3 ] = { };
+
+    // Downward caret
+    ui::ComputeCaretTips( 100.0f, 100.0f, true, 1.0f, TipsX, TipsY );
+    CHECK_CLOSE( TipsX[ 0 ], 100.0f - 3.6f, 0.001f );
+    CHECK_CLOSE( TipsX[ 1 ], 100.0f + 3.6f, 0.001f );
+    CHECK_CLOSE( TipsX[ 2 ], 100.0f, 0.001f );
+    CHECK_CLOSE( TipsY[ 2 ], 100.0f + 3.6f * 0.75f, 0.001f );
+
+    // Rightward caret
+    ui::ComputeCaretTips( 100.0f, 100.0f, false, 1.0f, TipsX, TipsY );
+    CHECK_CLOSE( TipsX[ 1 ], 100.0f + 3.6f * 0.8f, 0.001f );
+    CHECK_CLOSE( TipsY[ 1 ], 100.0f, 0.001f );
+}
+
+TEST_CASE( "Layout: ComputeSwitchTrack and ComputeSwitchKnob" ) {
+    ui::RectBounds Track;
+    ui::ComputeSwitchTrack( 200.0f, 10.0f, 30.0f, 1.0f, Track );
+    CHECK_CLOSE( Track.left, 156.0f, 0.001f );
+    CHECK_CLOSE( Track.top, 14.0f, 0.001f );
+    CHECK_CLOSE( Track.width, 44.0f, 0.001f );
+    CHECK_CLOSE( Track.height, 22.0f, 0.001f );
+
+    // Switch Knob: OFF (0.0f)
+    ui::RectBounds KnobOff;
+    ui::ComputeSwitchKnob( Track, 1.0f, 0.0f, KnobOff );
+    CHECK_CLOSE( KnobOff.left, 158.0f, 0.001f );
+    CHECK_CLOSE( KnobOff.top, 16.0f, 0.001f );
+    CHECK_CLOSE( KnobOff.width, 18.0f, 0.001f );
+
+    // Switch Knob: ON (1.0f)
+    ui::RectBounds KnobOn;
+    ui::ComputeSwitchKnob( Track, 1.0f, 1.0f, KnobOn );
+    CHECK_CLOSE( KnobOn.left, 180.0f, 0.001f );
+}
+
+TEST_CASE( "Layout: ComputeDropListBox downward and upward flip" ) {
+    ui::RectBounds Downward;
+    bool OkDown = ui::ComputeDropListBox( 10.0f, 50.0f, 78.0f, 200.0f, 3, 800.0f, 1.0f, Downward );
+    CHECK( OkDown );
+    CHECK_CLOSE( Downward.left, 10.0f, 0.001f );
+    CHECK_CLOSE( Downward.top, 82.0f, 0.001f );
+    CHECK_CLOSE( Downward.height, 84.0f, 0.001f );
+
+    // Near screen bottom: should flip upwards
+    ui::RectBounds Upward;
+    bool OkUp = ui::ComputeDropListBox( 10.0f, 750.0f, 778.0f, 200.0f, 3, 800.0f, 1.0f, Upward );
+    CHECK( OkUp );
+    // 750 - 4 - 84 = 662
+    CHECK_CLOSE( Upward.top, 662.0f, 0.001f );
+
+    // Zero items returns false
+    ui::RectBounds Empty;
+    CHECK( !ui::ComputeDropListBox( 0.0f, 0.0f, 0.0f, 0.0f, 0, 800.0f, 1.0f, Empty ) );
+}
+
+TEST_CASE( "Layout: ValidatePickIndex boundary clamp" ) {
+    CHECK_EQ( ui::ValidatePickIndex( -1, 5 ), 0 );
+    CHECK_EQ( ui::ValidatePickIndex( 5, 5 ), 0 );
+    CHECK_EQ( ui::ValidatePickIndex( 2, 5 ), 2 );
+}
+
+
 
