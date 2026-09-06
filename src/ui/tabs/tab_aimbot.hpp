@@ -10,17 +10,18 @@ static bool DrawAimGeneral( const CRectangle& Body, const CVector& Point, bool C
     float Wide = Body.Width - 28.0f * Scale;
     float Top = Body.Top + 12.0f * Scale;
     float Row = 32.0f * Scale;
+    float Gap = 2.0f * Scale;
     bool Busy = false;
-    CRectangle First( Left, Top, Wide, Row );
-    Busy = DrawSwitch( First, "Enabled", "aim.on", Aim.on, Point, Click, Scale ) || Busy;
-    CRectangle Second( Left, First.Bottom( ) + 2.0f * Scale, Wide, Row );
-    Busy = DrawSwitch( Second, "Team check", "aim.team", Aim.team, Point, Click, Scale ) || Busy;
-    CRectangle Third( Left, Second.Bottom( ) + 2.0f * Scale, Wide, Row );
-    Busy = DrawSwitch( Third, "Visible only", "aim.vis", Aim.vis, Point, Click, Scale ) || Busy;
-    CRectangle Fourth( Left, Third.Bottom( ) + 2.0f * Scale, Wide, Row );
-    Busy = DrawSwitch( Fourth, "Sticky aim", "aim.sticky", Aim.sticky, Point, Click, Scale ) || Busy;
-    CRectangle Fifth( Left, Fourth.Bottom( ) + 2.0f * Scale, Wide, Row );
-    Busy = DrawSwitch( Fifth, "Prediction", "aim.pred", Aim.pred, Point, Click, Scale ) || Busy;
+    ui::RectBounds B0 = ui::ComputeStackedRow( Left, Top, Wide, Row, Gap, 0 );
+    Busy = DrawSwitch( CRectangle( B0.left, B0.top, B0.width, B0.height ), "Enabled", "aim.on", Aim.on, Point, Click, Scale ) || Busy;
+    ui::RectBounds B1 = ui::ComputeStackedRow( Left, Top, Wide, Row, Gap, 1 );
+    Busy = DrawSwitch( CRectangle( B1.left, B1.top, B1.width, B1.height ), "Team check", "aim.team", Aim.team, Point, Click, Scale ) || Busy;
+    ui::RectBounds B2 = ui::ComputeStackedRow( Left, Top, Wide, Row, Gap, 2 );
+    Busy = DrawSwitch( CRectangle( B2.left, B2.top, B2.width, B2.height ), "Visible only", "aim.vis", Aim.vis, Point, Click, Scale ) || Busy;
+    ui::RectBounds B3 = ui::ComputeStackedRow( Left, Top, Wide, Row, Gap, 3 );
+    Busy = DrawSwitch( CRectangle( B3.left, B3.top, B3.width, B3.height ), "Sticky aim", "aim.sticky", Aim.sticky, Point, Click, Scale ) || Busy;
+    ui::RectBounds B4 = ui::ComputeStackedRow( Left, Top, Wide, Row, Gap, 4 );
+    Busy = DrawSwitch( CRectangle( B4.left, B4.top, B4.width, B4.height ), "Prediction", "aim.pred", Aim.pred, Point, Click, Scale ) || Busy;
     return Busy;
 }
 

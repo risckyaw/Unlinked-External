@@ -213,4 +213,61 @@ inline int ValidatePickIndex( int Pick, int Count ) {
     return Pick;
 }
 
+inline RectBounds ComputeStackedRow( float Left, float Top, float Wide, float RowHeight, float Gap, int Index ) {
+    float Step = RowHeight + Gap;
+    return { Left, Top + Step * ( float )Index, Wide, RowHeight };
+}
+
+inline void ComputeSplitPair( float Left, float Top, float AvailableWidth, float Gap, float Height, RectBounds& OutLeft, RectBounds& OutRight ) {
+    float Half = ( AvailableWidth - Gap ) * 0.5f;
+    if ( Half < 0.0f )
+        Half = 0.0f;
+    OutLeft = { Left, Top, Half, Height };
+    OutRight = { Left + Half + Gap, Top, Half, Height };
+}
+
+inline void ComputeCardContainer( float Left, float Top, float Wide, float HeaderHeight, float BodyHeight, RectBounds& OutCard, RectBounds& OutBar, RectBounds& OutBody ) {
+    OutCard = { Left, Top, Wide, HeaderHeight + BodyHeight };
+    OutBar = { Left, Top, Wide, HeaderHeight };
+    OutBody = { Left, Top + HeaderHeight, Wide, BodyHeight };
+}
+
+inline void ComputeFoldCard( float Left, float Top, float Wide, float Head, float BodyNeed, float OpenProgress, RectBounds& OutCard, RectBounds& OutBar, RectBounds& OutBody ) {
+    float ClampedOpen = OpenProgress < 0.0f ? 0.0f : ( OpenProgress > 1.0f ? 1.0f : OpenProgress );
+    OutCard = { Left, Top, Wide, Head + BodyNeed * ClampedOpen };
+    OutBar = { Left, Top, Wide, Head };
+    OutBody = { Left, Top + Head, Wide, BodyNeed };
+}
+
+inline RectBounds ComputeFoldArrow( const RectBounds& Bar, float Scale, float MarkSize = 15.0f, float Margin = 14.0f ) {
+    float Mark = MarkSize * Scale;
+    return { ( Bar.left + Bar.width ) - Mark - Margin * Scale, Bar.top + ( Bar.height - Mark ) * 0.5f, Mark, Mark };
+}
+
+inline RectBounds ComputeCenteredBounds( float ScreenW, float ScreenH, float Width, float Height ) {
+    return { ( ScreenW - Width ) * 0.5f, ( ScreenH - Height ) * 0.5f, Width, Height };
+}
+
+inline float ComputeModalTall( float HeadH, float Line, float StepGap, int StepCount, float AfterSteps, float ActH, float Pad, float Scale ) {
+    float Tall = HeadH + 14.0f * Scale + Line + 6.0f * Scale + Line + 12.0f * Scale + Line + 10.0f * Scale;
+    for ( int Index = 0; Index < StepCount; Index++ )
+        Tall += Line + StepGap;
+    Tall += AfterSteps + ActH + Pad;
+    return Tall;
+}
+
+inline float EaseOutQuint( float T ) {
+    if ( T <= 0.0f )
+        return 0.0f;
+    if ( T >= 1.0f )
+        return 1.0f;
+    float Remain = 1.0f - T;
+    return 1.0f - Remain * Remain * Remain * Remain * Remain;
+}
+
+inline float ComputePageSlide( float PageIn, float Scale, float PageDir, float Distance = 36.0f ) {
+    float Ease = EaseOutQuint( PageIn );
+    return ( 1.0f - Ease ) * Distance * Scale * PageDir;
+}
+
 }

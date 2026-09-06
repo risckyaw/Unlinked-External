@@ -318,5 +318,128 @@ TEST_CASE( "Layout: ValidatePickIndex boundary clamp" ) {
     CHECK_EQ( ui::ValidatePickIndex( 2, 5 ), 2 );
 }
 
+TEST_CASE( "Layout: ComputeStackedRow vertical stepping" ) {
+    ui::RectBounds Row0 = ui::ComputeStackedRow( 10.0f, 20.0f, 300.0f, 28.0f, 2.0f, 0 );
+    CHECK_CLOSE( Row0.left, 10.0f, 0.001f );
+    CHECK_CLOSE( Row0.top, 20.0f, 0.001f );
+    CHECK_CLOSE( Row0.width, 300.0f, 0.001f );
+    CHECK_CLOSE( Row0.height, 28.0f, 0.001f );
 
+    ui::RectBounds Row1 = ui::ComputeStackedRow( 10.0f, 20.0f, 300.0f, 28.0f, 2.0f, 1 );
+    CHECK_CLOSE( Row1.top, 50.0f, 0.001f );
 
+    ui::RectBounds Row5 = ui::ComputeStackedRow( 10.0f, 20.0f, 300.0f, 28.0f, 2.0f, 5 );
+    CHECK_CLOSE( Row5.top, 170.0f, 0.001f );
+}
+
+TEST_CASE( "Layout: ComputeSplitPair two-column split" ) {
+    ui::RectBounds Left;
+    ui::RectBounds Right;
+    ui::ComputeSplitPair( 15.0f, 50.0f, 208.0f, 8.0f, 32.0f, Left, Right );
+
+    // Available width 208, Gap 8 -> (208 - 8) / 2 = 100 each
+    CHECK_CLOSE( Left.left, 15.0f, 0.001f );
+    CHECK_CLOSE( Left.top, 50.0f, 0.001f );
+    CHECK_CLOSE( Left.width, 100.0f, 0.001f );
+    CHECK_CLOSE( Left.height, 32.0f, 0.001f );
+
+    CHECK_CLOSE( Right.left, 123.0f, 0.001f );
+    CHECK_CLOSE( Right.top, 50.0f, 0.001f );
+    CHECK_CLOSE( Right.width, 100.0f, 0.001f );
+    CHECK_CLOSE( Right.height, 32.0f, 0.001f );
+}
+
+TEST_CASE( "Layout: ComputeCardContainer header and body partitioning" ) {
+    ui::RectBounds Card;
+    ui::RectBounds Bar;
+    ui::RectBounds Body;
+    ui::ComputeCardContainer( 20.0f, 30.0f, 400.0f, 42.0f, 200.0f, Card, Bar, Body );
+
+    CHECK_CLOSE( Card.left, 20.0f, 0.001f );
+    CHECK_CLOSE( Card.top, 30.0f, 0.001f );
+    CHECK_CLOSE( Card.width, 400.0f, 0.001f );
+    CHECK_CLOSE( Card.height, 242.0f, 0.001f );
+
+    CHECK_CLOSE( Bar.left, 20.0f, 0.001f );
+    CHECK_CLOSE( Bar.top, 30.0f, 0.001f );
+    CHECK_CLOSE( Bar.width, 400.0f, 0.001f );
+    CHECK_CLOSE( Bar.height, 42.0f, 0.001f );
+
+    CHECK_CLOSE( Body.left, 20.0f, 0.001f );
+    CHECK_CLOSE( Body.top, 72.0f, 0.001f );
+    CHECK_CLOSE( Body.width, 400.0f, 0.001f );
+    CHECK_CLOSE( Body.height, 200.0f, 0.001f );
+}
+
+TEST_CASE( "Layout: ComputeFoldCard expanding accordion geometry" ) {
+    ui::RectBounds Card;
+    ui::RectBounds Bar;
+    ui::RectBounds Body;
+
+    // Closed (Open = 0.0f)
+    ui::ComputeFoldCard( 10.0f, 15.0f, 350.0f, 38.0f, 120.0f, 0.0f, Card, Bar, Body );
+    CHECK_CLOSE( Card.height, 38.0f, 0.001f );
+    CHECK_CLOSE( Bar.height, 38.0f, 0.001f );
+    CHECK_CLOSE( Body.top, 53.0f, 0.001f );
+    CHECK_CLOSE( Body.height, 120.0f, 0.001f );
+
+    // Half-open (Open = 0.5f)
+    ui::ComputeFoldCard( 10.0f, 15.0f, 350.0f, 38.0f, 120.0f, 0.5f, Card, Bar, Body );
+    CHECK_CLOSE( Card.height, 98.0f, 0.001f );
+
+    // Fully open (Open = 1.0f)
+    ui::ComputeFoldCard( 10.0f, 15.0f, 350.0f, 38.0f, 120.0f, 1.0f, Card, Bar, Body );
+    CHECK_CLOSE( Card.height, 158.0f, 0.001f );
+}
+
+TEST_CASE( "Layout: ComputeFoldArrow indicator positioning" ) {
+    ui::RectBounds Bar{ 10.0f, 20.0f, 300.0f, 40.0f };
+    ui::RectBounds Arrow = ui::ComputeFoldArrow( Bar, 1.0f, 15.0f, 14.0f );
+
+    // Right = 310, Mark = 15, Margin = 14 -> Left = 310 - 15 - 14 = 281
+    CHECK_CLOSE( Arrow.left, 281.0f, 0.001f );
+    // Top = 20 + (40 - 15) * 0.5 = 32.5
+    CHECK_CLOSE( Arrow.top, 32.5f, 0.001f );
+    CHECK_CLOSE( Arrow.width, 15.0f, 0.001f );
+    CHECK_CLOSE( Arrow.height, 15.0f, 0.001f );
+}
+
+TEST_CASE( "Layout: ComputeCenteredBounds dialog centering" ) {
+    ui::RectBounds Center = ui::ComputeCenteredBounds( 1920.0f, 1080.0f, 448.0f, 300.0f );
+    CHECK_CLOSE( Center.left, 736.0f, 0.001f );
+    CHECK_CLOSE( Center.top, 390.0f, 0.001f );
+    CHECK_CLOSE( Center.width, 448.0f, 0.001f );
+    CHECK_CLOSE( Center.height, 300.0f, 0.001f );
+}
+
+TEST_CASE( "Layout: ComputeModalTall calculation" ) {
+    // 7 steps, scale 1.0f, Line 16.0f, StepGap 6.0f, AfterSteps 18.0f, ActH 32.0f, Pad 18.0f, HeadH 42.0f
+    float Tall = ui::ComputeModalTall( 42.0f, 16.0f, 6.0f, 7, 18.0f, 32.0f, 18.0f, 1.0f );
+    // Base: 42 + 14 + 16 + 6 + 16 + 12 + 16 + 10 = 132
+    // 7 steps * (16 + 6) = 154
+    // Bottom: 18 + 32 + 18 = 68
+    // Total: 132 + 154 + 68 = 354
+    CHECK_CLOSE( Tall, 354.0f, 0.001f );
+}
+
+TEST_CASE( "Layout: EaseOutQuint and ComputePageSlide" ) {
+    CHECK_CLOSE( ui::EaseOutQuint( 0.0f ), 0.0f, 0.001f );
+    CHECK_CLOSE( ui::EaseOutQuint( 1.0f ), 1.0f, 0.001f );
+    CHECK_CLOSE( ui::EaseOutQuint( -0.5f ), 0.0f, 0.001f );
+    CHECK_CLOSE( ui::EaseOutQuint( 1.5f ), 1.0f, 0.001f );
+
+    // At halfway (0.5), Ease = 1 - (0.5)^5 = 1 - 0.03125 = 0.96875
+    CHECK_CLOSE( ui::EaseOutQuint( 0.5f ), 0.96875f, 0.001f );
+
+    // Slide at PageIn = 0.0f: full slide (1 - 0) * 36 * 1.0 * 1 = 36.0f
+    float Slide0 = ui::ComputePageSlide( 0.0f, 1.0f, 1.0f, 36.0f );
+    CHECK_CLOSE( Slide0, 36.0f, 0.001f );
+
+    // Slide at PageIn = 1.0f: 0.0f
+    float Slide1 = ui::ComputePageSlide( 1.0f, 1.0f, 1.0f, 36.0f );
+    CHECK_CLOSE( Slide1, 0.0f, 0.001f );
+
+    // Slide in reverse direction (-1.0f)
+    float SlideRev = ui::ComputePageSlide( 0.0f, 1.0f, -1.0f, 36.0f );
+    CHECK_CLOSE( SlideRev, -36.0f, 0.001f );
+}

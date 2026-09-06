@@ -325,9 +325,11 @@ static bool DrawConfigs( const CRectangle& Content, const CVector& Point, bool C
     if ( ManBodyH < 168.0f * Scale && Room > 168.0f * Scale )
         ManBodyH = 168.0f * Scale;
 
-    CRectangle Lib( Left, Top, ListW, Head + LibBodyH );
-    CRectangle LibBar( Left, Top, ListW, Head );
-    CRectangle LibBody( Left, Top + Head, ListW, LibBodyH );
+    ui::RectBounds LibB, LibBarB, LibBodyB;
+    ui::ComputeCardContainer( Left, Top, ListW, Head, LibBodyH, LibB, LibBarB, LibBodyB );
+    CRectangle Lib( LibB.left, LibB.top, LibB.width, LibB.height );
+    CRectangle LibBar( LibBarB.left, LibBarB.top, LibBarB.width, LibBarB.height );
+    CRectangle LibBody( LibBodyB.left, LibBodyB.top, LibBodyB.width, LibBodyB.height );
     Canvas->Rectangle( Lib, Dress.card, Round );
     DrawIce( LibBar, CRectangle( Left, Top, ListW, Head + Round ), Round, 1.0f );
     Canvas->Border( Lib, Dress.foldLine, Round, 1.0f );
@@ -387,9 +389,11 @@ static bool DrawConfigs( const CRectangle& Content, const CVector& Point, bool C
     Canvas->PopClip( );
 
     float Side = Left + ListW + Gap;
-    CRectangle Box( Side, Top, SideW, Head + ManBodyH );
-    CRectangle Bar( Side, Top, SideW, Head );
-    CRectangle Inner( Side, Top + Head, SideW, ManBodyH );
+    ui::RectBounds BoxB, BarB, InnerB;
+    ui::ComputeCardContainer( Side, Top, SideW, Head, ManBodyH, BoxB, BarB, InnerB );
+    CRectangle Box( BoxB.left, BoxB.top, BoxB.width, BoxB.height );
+    CRectangle Bar( BarB.left, BarB.top, BarB.width, BarB.height );
+    CRectangle Inner( InnerB.left, InnerB.top, InnerB.width, InnerB.height );
     Canvas->Rectangle( Box, Dress.card, Round );
     DrawIce( Bar, CRectangle( Side, Top, SideW, Head + Round ), Round, 1.0f );
     Canvas->Border( Box, Dress.foldLine, Round, 1.0f );
@@ -435,9 +439,10 @@ static bool DrawConfigs( const CRectangle& Content, const CVector& Point, bool C
     }
     CursorY += FieldH + 8.0f * Scale;
 
-    float Half = ( InnerW - 8.0f * Scale ) * 0.5f;
-    CRectangle Load( Side + PadX, CursorY, Half, ActH );
-    CRectangle Save( Load.Right( ) + 8.0f * Scale, CursorY, Half, ActH );
+    ui::RectBounds LoadB, SaveB;
+    ui::ComputeSplitPair( Side + PadX, CursorY, InnerW, 8.0f * Scale, ActH, LoadB, SaveB );
+    CRectangle Load( LoadB.left, LoadB.top, LoadB.width, LoadB.height );
+    CRectangle Save( SaveB.left, SaveB.top, SaveB.width, SaveB.height );
     if ( DrawAction( Load, "Load", Point, Click, Scale, false ) ) {
         if ( Packs.count > 0 && PackLoad( Packs.names[ Packs.pick ] ) )
             PackNote( "Loaded" );
@@ -457,8 +462,10 @@ static bool DrawConfigs( const CRectangle& Content, const CVector& Point, bool C
     }
     CursorY += ActH + 6.0f * Scale;
 
-    CRectangle Kill( Side + PadX, CursorY, Half, ActH );
-    CRectangle Folder( Kill.Right( ) + 8.0f * Scale, CursorY, Half, ActH );
+    ui::RectBounds KillB, FolderB;
+    ui::ComputeSplitPair( Side + PadX, CursorY, InnerW, 8.0f * Scale, ActH, KillB, FolderB );
+    CRectangle Kill( KillB.left, KillB.top, KillB.width, KillB.height );
+    CRectangle Folder( FolderB.left, FolderB.top, FolderB.width, FolderB.height );
     if ( DrawAction( Kill, Packs.confirm ? "Sure?" : "Delete", Point, Click, Scale, true ) ) {
         if ( Packs.count > 0 ) {
             if ( !Packs.confirm ) {

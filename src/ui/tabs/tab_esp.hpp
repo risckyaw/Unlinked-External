@@ -10,19 +10,21 @@ static bool DrawEspOverlay( const CRectangle& Body, const CVector& Point, bool C
     float Wide = Body.Width - 28.0f * Scale;
     float Top = Body.Top + 12.0f * Scale;
     float Row = 32.0f * Scale;
+    float Gap = 2.0f * Scale;
     bool Busy = false;
-    CRectangle First( Left, Top, Wide, Row );
-    Busy = DrawSwitch( First, "Enabled", "esp.on", Esp.on, Point, Click, Scale ) || Busy;
-    CRectangle Second( Left, First.Bottom( ) + 2.0f * Scale, Wide, Row );
-    Busy = DrawSwitch( Second, "Box", "esp.box", Esp.box, Point, Click, Scale ) || Busy;
-    CRectangle Third( Left, Second.Bottom( ) + 2.0f * Scale, Wide, Row );
-    Busy = DrawSwitch( Third, "Name", "esp.name", Esp.name, Point, Click, Scale ) || Busy;
-    CRectangle Fourth( Left, Third.Bottom( ) + 2.0f * Scale, Wide, Row );
-    Busy = DrawSwitch( Fourth, "Health", "esp.health", Esp.health, Point, Click, Scale ) || Busy;
-    CRectangle Fifth( Left, Fourth.Bottom( ) + 2.0f * Scale, Wide, Row );
-    Busy = DrawSwitch( Fifth, "Distance", "esp.dist", Esp.dist, Point, Click, Scale ) || Busy;
-    CRectangle Sixth( Left, Fifth.Bottom( ) + 2.0f * Scale, Wide, Row );
-    Busy = DrawSwitch( Sixth, "Team check", "esp.team", Esp.team, Point, Click, Scale ) || Busy;
+    struct ToggleDef { const char* label; const char* motion; bool& val; };
+    ToggleDef defs[] = {
+        { "Enabled", "esp.on", Esp.on },
+        { "Box", "esp.box", Esp.box },
+        { "Name", "esp.name", Esp.name },
+        { "Health", "esp.health", Esp.health },
+        { "Distance", "esp.dist", Esp.dist },
+        { "Team check", "esp.team", Esp.team }
+    };
+    for ( int i = 0; i < 6; ++i ) {
+        ui::RectBounds B = ui::ComputeStackedRow( Left, Top, Wide, Row, Gap, i );
+        Busy = DrawSwitch( CRectangle( B.left, B.top, B.width, B.height ), defs[ i ].label, defs[ i ].motion, defs[ i ].val, Point, Click, Scale ) || Busy;
+    }
     return Busy;
 }
 
@@ -31,11 +33,12 @@ static bool DrawEspVisual( const CRectangle& Body, const CVector& Point, bool Cl
     float Wide = Body.Width - 28.0f * Scale;
     float Top = Body.Top + 12.0f * Scale;
     float Row = 32.0f * Scale;
+    float Gap = 2.0f * Scale;
     bool Busy = false;
-    CRectangle First( Left, Top, Wide, Row );
-    Busy = DrawSwitch( First, "Skeleton", "esp.skel", Esp.skeleton, Point, Click, Scale ) || Busy;
-    CRectangle Second( Left, First.Bottom( ) + 2.0f * Scale, Wide, Row );
-    Busy = DrawSwitch( Second, "Snaplines", "esp.snap", Esp.snap, Point, Click, Scale ) || Busy;
+    ui::RectBounds B0 = ui::ComputeStackedRow( Left, Top, Wide, Row, Gap, 0 );
+    Busy = DrawSwitch( CRectangle( B0.left, B0.top, B0.width, B0.height ), "Skeleton", "esp.skel", Esp.skeleton, Point, Click, Scale ) || Busy;
+    ui::RectBounds B1 = ui::ComputeStackedRow( Left, Top, Wide, Row, Gap, 1 );
+    Busy = DrawSwitch( CRectangle( B1.left, B1.top, B1.width, B1.height ), "Snaplines", "esp.snap", Esp.snap, Point, Click, Scale ) || Busy;
     return Busy;
 }
 

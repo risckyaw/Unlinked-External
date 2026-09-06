@@ -747,8 +747,10 @@ static void TickAfk( ) {
 
 static bool DrawFold( float Left, float Top, float Wide, float Head, float BodyNeed, float Round, float Scale, const char* Name, const char* Motion, bool& OpenFlag, const CVector& Point, bool Click, CRectangle& Body, float& Open ) {
     Open = ur::motion::toward( Motion, OpenFlag ? 1.0f : 0.0f, 32.0f );
-    CRectangle Card( Left, Top, Wide, Head + BodyNeed * Open );
-    CRectangle Bar( Left, Top, Wide, Head );
+    ui::RectBounds CardB, BarB, BodyB;
+    ui::ComputeFoldCard( Left, Top, Wide, Head, BodyNeed, Open, CardB, BarB, BodyB );
+    CRectangle Card( CardB.left, CardB.top, CardB.width, CardB.height );
+    CRectangle Bar( BarB.left, BarB.top, BarB.width, BarB.height );
     bool OverBar = Bar.Contains( Point ) && !Moving( );
     if ( OverBar && Click )
         OpenFlag = !OpenFlag;
@@ -763,11 +765,12 @@ static bool DrawFold( float Left, float Top, float Wide, float Head, float BodyN
 
     ur::icons::Icon Arrow = Open > 0.5f ? ur::icons::Icon::ChevronUp : ur::icons::Icon::ChevronDown;
     unsigned long long Icon = ur::glyphs::image( Arrow, ( int )( 15.0f * Scale + 0.5f ), ur::glyphs::Weight::Solid );
-    float Mark = 15.0f * Scale;
-    if ( Icon )
-        Canvas->Image( CRectangle( Bar.Right( ) - Mark - 14.0f * Scale, Bar.Top + ( Head - Mark ) * 0.5f, Mark, Mark ), Icon, CRectangle( 0.0f, 0.0f, 1.0f, 1.0f ), Mix( Style->Faint, Dress.inkHot, Open ), 0.0f );
+    if ( Icon ) {
+        ui::RectBounds ArrowB = ui::ComputeFoldArrow( BarB, Scale, 15.0f, 14.0f );
+        Canvas->Image( CRectangle( ArrowB.left, ArrowB.top, ArrowB.width, ArrowB.height ), Icon, CRectangle( 0.0f, 0.0f, 1.0f, 1.0f ), Mix( Style->Faint, Dress.inkHot, Open ), 0.0f );
+    }
 
-    Body = CRectangle( Left, Bar.Bottom( ), Wide, BodyNeed );
+    Body = CRectangle( BodyB.left, BodyB.top, BodyB.width, BodyB.height );
     return OverBar;
 }
 
@@ -1063,12 +1066,10 @@ static void DrawChannelNotice( float Across, float Vertical, const CVector& Poin
     float AfterSteps = 18.0f * Scale;
     float StepGap = 6.0f * Scale;
     float Wide = 448.0f * Scale;
-    float Tall = HeadH + 14.0f * Scale + Line + 6.0f * Scale + Line + 12.0f * Scale + Line + 10.0f * Scale;
-    for ( int Index = 0; Index < 7; Index++ )
-        Tall += Line + StepGap;
-    Tall += AfterSteps + ActH + Pad;
+    float Tall = ui::ComputeModalTall( HeadH, Line, StepGap, 7, AfterSteps, ActH, Pad, Scale );
     CRectangle Shade( 0.0f, 0.0f, Across, Vertical );
-    CRectangle Card( ( Across - Wide ) * 0.5f, ( Vertical - Tall ) * 0.5f, Wide, Tall );
+    ui::RectBounds CardB = ui::ComputeCenteredBounds( Across, Vertical, Wide, Tall );
+    CRectangle Card( CardB.left, CardB.top, CardB.width, CardB.height );
     float Keep = Canvas->Opacity;
     Canvas->Opacity = 1.0f;
     Canvas->Rectangle( Shade, CColor( 6, 8, 12, 186 ), 0.0f );
@@ -1110,9 +1111,10 @@ static void DrawChannelNotice( float Across, float Vertical, const CVector& Poin
 
     Y += AfterSteps;
     float Gap = 8.0f * Scale;
-    float Half = ( Card.Width - Pad * 2.0f - Gap ) * 0.5f;
-    CRectangle Get( Card.Left + Pad, Y, Half, ActH );
-    CRectangle Ok( Get.Right( ) + Gap, Y, Half, ActH );
+    ui::RectBounds GetB, OkB;
+    ui::ComputeSplitPair( Card.Left + Pad, Y, Card.Width - Pad * 2.0f, Gap, ActH, GetB, OkB );
+    CRectangle Get( GetB.left, GetB.top, GetB.width, GetB.height );
+    CRectangle Ok( OkB.left, OkB.top, OkB.width, OkB.height );
     if ( DrawAction( Get, "Get Fishstrap", Point, Click, Scale, false ) )
         ShellExecuteA( nullptr, "open", "https://www.fishstrap.app/Fishstrap.exe", nullptr, nullptr, SW_SHOWNORMAL );
     if ( DrawAction( Ok, "Got it", Point, Click, Scale, false ) ) {
@@ -1131,9 +1133,8 @@ static void DrawPage( const CRectangle& Content, const CVector& Point, bool Clic
     if ( Menu.pageIn > 1.0f )
         Menu.pageIn = 1.0f;
 
-    float Remain = 1.0f - Menu.pageIn;
-    float Ease = 1.0f - Remain * Remain * Remain * Remain * Remain;
-    float Slide = ( 1.0f - Ease ) * 36.0f * Scale * Menu.pageDir;
+    float Ease = ui::EaseOutQuint( Menu.pageIn );
+    float Slide = ui::ComputePageSlide( Menu.pageIn, Scale, Menu.pageDir, 36.0f );
     bool Live = Menu.pageIn > 0.82f;
 
     CRectangle Shifted = Content;

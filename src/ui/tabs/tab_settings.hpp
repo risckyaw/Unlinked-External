@@ -79,11 +79,17 @@ static bool DrawGameBody( const CRectangle& Body, const CVector& Point, bool Cli
     float Row = 32.0f * Scale;
     bool Busy = false;
 
-    CRectangle First( Left, Top, Wide, Row );
+    float Gap = 2.0f * Scale;
+    ui::RectBounds FirstB = ui::ComputeStackedRow( Left, Top, Wide, Row, Gap, 0 );
+    CRectangle First( FirstB.left, FirstB.top, FirstB.width, FirstB.height );
     Busy = DrawSwitch( First, "Anti-AFK", "game.afk", Menu.afk, Point, Click, Scale ) || Busy;
-    CRectangle Second( Left, First.Bottom( ) + 2.0f * Scale, Wide, Row );
+
+    ui::RectBounds SecondB = ui::ComputeStackedRow( Left, Top, Wide, Row, Gap, 1 );
+    CRectangle Second( SecondB.left, SecondB.top, SecondB.width, SecondB.height );
     Busy = DrawSwitch( Second, "Uncapped FPS", "game.uncap", Menu.uncap, Point, Click, Scale ) || Busy;
-    CRectangle Third( Left, Second.Bottom( ) + 2.0f * Scale, Wide, Row );
+
+    ui::RectBounds ThirdB = ui::ComputeStackedRow( Left, Top, Wide, Row, Gap, 2 );
+    CRectangle Third( ThirdB.left, ThirdB.top, ThirdB.width, ThirdB.height );
     Canvas->Text( CVector( Third.Left, Third.Top + ( Row - Font->LineSpan ) * 0.5f ), Style->Text, "Game Explorer" );
     const char* Action = Tree.open ? "Close" : "Open";
     CVector OpenSize = Font->Measure( "Close" );
@@ -113,7 +119,8 @@ static bool DrawGameBody( const CRectangle& Body, const CVector& Point, bool Cli
     }
     Busy = Busy || OverOpen;
 
-    CRectangle Fourth( Left, Third.Bottom( ) + 2.0f * Scale, Wide, Row );
+    ui::RectBounds FourthB = ui::ComputeStackedRow( Left, Top, Wide, Row, Gap, 3 );
+    CRectangle Fourth( FourthB.left, FourthB.top, FourthB.width, FourthB.height );
     Canvas->Text( CVector( Fourth.Left, Fourth.Top + ( Row - Font->LineSpan ) * 0.5f ), Style->Text, "Offsets" );
     const char* Refresh = "Refresh";
     CVector RefreshSize = Font->Measure( Refresh );
@@ -194,12 +201,18 @@ static bool DrawOverlayBody( const CRectangle& Body, const CVector& Point, bool 
     float Wide = Body.Width - 28.0f * Scale;
     float Top = Body.Top + 12.0f * Scale;
     float Row = 30.0f * Scale;
+    float Gap = 4.0f * Scale;
     bool Busy = false;
-    CRectangle First( Left, Top, Wide, Row );
+    ui::RectBounds FirstB = ui::ComputeStackedRow( Left, Top, Wide, Row, Gap, 0 );
+    CRectangle First( FirstB.left, FirstB.top, FirstB.width, FirstB.height );
     Busy = DrawSwitch( First, "Watermark", "set.watermark", Menu.watermark, Point, Click, Scale ) || Busy;
-    CRectangle Second( Left, First.Bottom( ) + 4.0f * Scale, Wide, Row );
+
+    ui::RectBounds SecondB = ui::ComputeStackedRow( Left, Top, Wide, Row, Gap, 1 );
+    CRectangle Second( SecondB.left, SecondB.top, SecondB.width, SecondB.height );
     Busy = DrawSwitch( Second, "Show FPS", "set.showfps", Menu.showFps, Point, Click, Scale ) || Busy;
-    CRectangle Third( Left, Second.Bottom( ) + 4.0f * Scale, Wide, Row );
+
+    ui::RectBounds ThirdB = ui::ComputeStackedRow( Left, Top, Wide, Row, Gap, 2 );
+    CRectangle Third( ThirdB.left, ThirdB.top, ThirdB.width, ThirdB.height );
     Busy = DrawSwitch( Third, "Streamproof", "set.stream", Menu.stream, Point, Click, Scale ) || Busy;
     Busy = DrawSlider( Left, Third.Bottom( ) + 8.0f * Scale, Wide, "Menu opacity", "set.fade", Menu.fade, 40.0f, 100.0f, Point, Click, Press, Scale ) || Busy;
     Busy = DrawSlider( Left, Third.Bottom( ) + 40.0f * Scale, Wide, "ESP range", "esp.range", Esp.range, 25.0f, 2000.0f, Point, Click, Press, Scale ) || Busy;
