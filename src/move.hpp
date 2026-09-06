@@ -34,6 +34,36 @@ inline bool Down( int Key ) {
     return ( GetAsyncKeyState( Key ) & 0x8000 ) != 0;
 }
 
+[[nodiscard]] constexpr float ComputeJumpHeight( float JumpPower, float Ratio = 0.144f ) noexcept {
+    return JumpPower * Ratio;
+}
+
+[[nodiscard]] constexpr bool ShouldExecuteInfJump( bool InfJumpEnabled, bool JumpEnabled, bool SpaceDown, bool SpaceEdge ) noexcept {
+    const bool Repeat = InfJumpEnabled && SpaceDown;
+    const bool Once = JumpEnabled && !InfJumpEnabled && SpaceEdge;
+    return Repeat || Once;
+}
+
+[[nodiscard]] constexpr float ComputeEffectiveJumpPower( bool JumpEnabled, float JumpPower, float DefaultPower = 50.0f ) noexcept {
+    return JumpEnabled ? JumpPower : DefaultPower;
+}
+
+[[nodiscard]] constexpr float ComputeBoostedJumpVelocity( float CurrentVelY, float TargetPower ) noexcept {
+    return CurrentVelY < TargetPower ? TargetPower : CurrentVelY;
+}
+
+[[nodiscard]] constexpr bool ShouldRescanClip( bool ClipOn, unsigned int ElapsedMs, unsigned int RescanIntervalMs = 350 ) noexcept {
+    return !ClipOn || ( ElapsedMs > RescanIntervalMs );
+}
+
+[[nodiscard]] constexpr float ClampJumpPower( float Power, float Min = 1.0f, float Max = 500.0f ) noexcept {
+    if ( Power < Min )
+        return Min;
+    if ( Power > Max )
+        return Max;
+    return Power;
+}
+
 struct State {
     bool jumpOn = false;
     bool clipOn = false;
@@ -59,7 +89,7 @@ inline void WriteJump( uintptr_t Hum, float Power ) {
     }
     world::Poke( Hum + O.humanoidJump, Power );
     if ( O.humanoidJumpH )
-        world::Poke( Hum + O.humanoidJumpH, Power * 0.144f );
+        world::Poke( Hum + O.humanoidJumpH, ComputeJumpHeight( Power ) );
 }
 
 inline void RequestJump( uintptr_t Hum ) {
@@ -146,17 +176,14 @@ inline void TickInfJump( ) {
     S.spaceWas = Space;
     if ( !E.localRoot )
         return;
-    bool Repeat = C.infJump && Space;
-    bool Once = C.jump && !C.infJump && Edge;
-    if ( !Repeat && !Once )
+    if ( !ShouldExecuteInfJump( C.infJump, C.jump, Space, Edge ) )
         return;
     RequestJump( E.localHum );
     world::Vec3 Vel;
     if ( !world::PartVel( E.localRoot, Vel ) )
         return;
-    float Power = C.jump ? C.jumpPower : 50.0f;
-    if ( Vel.y < Power )
-        Vel.y = Power;
+    float Power = ComputeEffectiveJumpPower( C.jump, C.jumpPower );
+    Vel.y = ComputeBoostedJumpVelocity( Vel.y, Power );
     world::WritePartVel( E.localRoot, Vel );
 }
 
@@ -171,7 +198,7 @@ inline void TickClip( bool Active ) {
         return;
     static unsigned Last = 0;
     unsigned Now = GetTickCount( );
-    if ( !S.clipOn || Now - Last > 350 ) {
+    if ( ShouldRescanClip( S.clipOn, Now - Last ) ) {
         ScanClip( E.localModel );
         Last = Now;
         S.clipOn = true;
@@ -198,10 +225,7 @@ inline void Tick( float Dt, bool Busy ) {
 
 inline void Clamp( ) {
     Cfg& C = Live( );
-    if ( C.jumpPower < 1.0f )
-        C.jumpPower = 1.0f;
-    if ( C.jumpPower > 500.0f )
-        C.jumpPower = 500.0f;
+    C.jumpPower = ClampJumpPower( C.jumpPower );
 }
 
 }
