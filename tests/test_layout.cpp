@@ -553,3 +553,79 @@ TEST_CASE( "Layout: ComputeTabItemGeometry glyph and label placement" ) {
     CHECK_CLOSE( LabelY, 94.0f, 0.001f );
 }
 
+TEST_CASE( "Layout: ValidateBitmask empty fallback" ) {
+    // Valid non-zero bits within mask
+    CHECK_EQ( ui::ValidateBitmask( 5, 4, 1 ), 5 );
+    CHECK_EQ( ui::ValidateBitmask( 2, 4, 1 ), 2 );
+
+    // Zero bits falls back to default
+    CHECK_EQ( ui::ValidateBitmask( 0, 4, 1 ), 1 );
+    CHECK_EQ( ui::ValidateBitmask( 0, 4, 4 ), 4 );
+
+    // Out of range bits (e.g. 16 for 4 items: mask is 15 -> (16 & 15) == 0)
+    CHECK_EQ( ui::ValidateBitmask( 16, 4, 1 ), 1 );
+}
+
+TEST_CASE( "Layout: ToggleBitmaskOption toggle and non-empty enforcement" ) {
+    int Bits = 1; // Item 0 selected
+
+    // Toggling item 1 ON (1 -> 1 | 2 = 3)
+    Bits = ui::ToggleBitmaskOption( Bits, 1, 4 );
+    CHECK_EQ( Bits, 3 );
+
+    // Toggling item 0 OFF (3 -> 2)
+    Bits = ui::ToggleBitmaskOption( Bits, 0, 4 );
+    CHECK_EQ( Bits, 2 );
+
+    // Toggling the only selected item (item 1) OFF does NOT produce 0:
+    // It enforces non-empty by keeping the toggled item (1 << 1 = 2)
+    Bits = ui::ToggleBitmaskOption( Bits, 1, 4 );
+    CHECK_EQ( Bits, 2 );
+}
+
+TEST_CASE( "Layout: ComputeGridItemBounds column and row layout" ) {
+    // 3 columns, item size 20x20, gap 5x5, starting at (10, 10)
+    // Index 0: col 0, row 0 -> (10, 10)
+    ui::RectBounds Item0 = ui::ComputeGridItemBounds( 10.0f, 10.0f, 20.0f, 20.0f, 5.0f, 5.0f, 3, 0 );
+    CHECK_CLOSE( Item0.left, 10.0f, 0.001f );
+    CHECK_CLOSE( Item0.top, 10.0f, 0.001f );
+
+    // Index 1: col 1, row 0 -> (10 + 25 = 35, 10)
+    ui::RectBounds Item1 = ui::ComputeGridItemBounds( 10.0f, 10.0f, 20.0f, 20.0f, 5.0f, 5.0f, 3, 1 );
+    CHECK_CLOSE( Item1.left, 35.0f, 0.001f );
+    CHECK_CLOSE( Item1.top, 10.0f, 0.001f );
+
+    // Index 4: col 1, row 1 -> (35, 10 + 25 = 35)
+    ui::RectBounds Item4 = ui::ComputeGridItemBounds( 10.0f, 10.0f, 20.0f, 20.0f, 5.0f, 5.0f, 3, 4 );
+    CHECK_CLOSE( Item4.left, 35.0f, 0.001f );
+    CHECK_CLOSE( Item4.top, 35.0f, 0.001f );
+
+    // Guard against Columns < 1
+    ui::RectBounds ItemZeroCol = ui::ComputeGridItemBounds( 10.0f, 10.0f, 20.0f, 20.0f, 5.0f, 5.0f, 0, 2 );
+    CHECK_CLOSE( ItemZeroCol.top, 10.0f + 25.0f * 2.0f, 0.001f );
+}
+
+TEST_CASE( "Layout: ComputePageFit dynamic height adjustment with options" ) {
+    // Base fit at scale 1.0f with DrawFov = false, LimitFps = false
+    ui::PageFit BaseFit = ui::ComputePageFit( 1.0f, false, false );
+    CHECK_CLOSE( BaseFit.target, 276.0f, 0.001f );
+    CHECK_CLOSE( BaseFit.misc, 138.0f, 0.001f );
+    CHECK_CLOSE( BaseFit.inset, 10.0f, 0.001f );
+    CHECK_CLOSE( BaseFit.general, 200.0f, 0.001f );
+
+    // DrawFov = true adds 32.0f to target height
+    ui::PageFit FovFit = ui::ComputePageFit( 1.0f, true, false );
+    CHECK_CLOSE( FovFit.target, 308.0f, 0.001f );
+
+    // LimitFps = true adds 28.0f to misc height
+    ui::PageFit LimitFit = ui::ComputePageFit( 1.0f, false, true );
+    CHECK_CLOSE( LimitFit.misc, 166.0f, 0.001f );
+
+    // Scale = 1.5f scales all fit dimensions proportionally
+    ui::PageFit ScaledFit = ui::ComputePageFit( 1.5f, true, true );
+    CHECK_CLOSE( ScaledFit.target, 308.0f * 1.5f, 0.001f );
+    CHECK_CLOSE( ScaledFit.misc, 166.0f * 1.5f, 0.001f );
+    CHECK_CLOSE( ScaledFit.inset, 15.0f, 0.001f );
+}
+
+

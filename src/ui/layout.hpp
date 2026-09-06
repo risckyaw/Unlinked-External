@@ -332,4 +332,67 @@ inline void ComputeTabItemGeometry( float TabLeft, float TabTop, float TabWidth,
     OutLabelY = ( OutGlyph.top + OutGlyph.height ) + 7.0f * Scale;
 }
 
+inline int ValidateBitmask( int Bits, int TotalCount, int DefaultBits = 1 ) {
+    int Mask = ( 1 << TotalCount ) - 1;
+    if ( ( Bits & Mask ) == 0 )
+        return DefaultBits;
+    return Bits;
+}
+
+inline int ToggleBitmaskOption( int CurrentBits, int Index, int TotalCount ) {
+    int Mask = ( 1 << TotalCount ) - 1;
+    int NewBits = CurrentBits ^ ( 1 << Index );
+    if ( ( NewBits & Mask ) == 0 )
+        NewBits = 1 << Index;
+    return NewBits;
+}
+
+inline RectBounds ComputeGridItemBounds( float Left, float Top, float ItemW, float ItemH, float GapX, float GapY, int Columns, int Index ) {
+    if ( Columns < 1 )
+        Columns = 1;
+    int Col = Index % Columns;
+    int Row = Index / Columns;
+    return { Left + ( ItemW + GapX ) * ( float )Col,
+             Top + ( ItemH + GapY ) * ( float )Row,
+             ItemW, ItemH };
+}
+
+struct PageFit {
+    float inset;
+    float gap;
+    float head;
+    float general;
+    float target;
+    float silent;
+    float rageJump;
+    float rageNoclip;
+    float overlay;
+    float visual;
+    float theme;
+    float custom;
+    float misc;
+    float game;
+    float setOverlay;
+};
+
+inline PageFit ComputePageFit( float Scale, bool DrawFov, bool LimitFps ) {
+    PageFit Fit;
+    Fit.inset = 10.0f * Scale;
+    Fit.gap = 8.0f * Scale;
+    Fit.head = 36.0f * Scale;
+    Fit.general = 200.0f * Scale;
+    Fit.silent = 220.0f * Scale;
+    Fit.target = ( 276.0f + ( DrawFov ? 32.0f : 0.0f ) ) * Scale;
+    Fit.rageJump = 128.0f * Scale;
+    Fit.rageNoclip = 58.0f * Scale;
+    Fit.overlay = 232.0f * Scale;
+    Fit.visual = 88.0f * Scale;
+    Fit.theme = 228.0f * Scale;
+    Fit.custom = 236.0f * Scale;
+    Fit.misc = ( 138.0f + ( LimitFps ? 28.0f : 0.0f ) ) * Scale;
+    Fit.game = 160.0f * Scale;
+    Fit.setOverlay = 204.0f * Scale;
+    return Fit;
+}
+
 }

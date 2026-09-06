@@ -795,8 +795,7 @@ static const char* BitLabel( const char* const* Options, int Count, int Bits ) {
 }
 
 static bool DrawDropBits( float Left, float Top, float Wide, const char* Label, const char* Id, const char* const* Options, int Count, int& Bits, const CVector& Point, bool Click, float Scale ) {
-    if ( ( Bits & ( ( 1 << Count ) - 1 ) ) == 0 )
-        Bits = 1;
+    Bits = ui::ValidateBitmask( Bits, Count );
     if ( Label ) {
         Canvas->Text( CVector( Left, Top ), Style->Faint, Label );
         Top += Font->LineSpan + 4.0f * Scale;
@@ -854,9 +853,7 @@ static bool DrawDropList( const CVector& Point, bool Click, float Scale ) {
         Canvas->Text( CVector( Row.Left + 8.0f * Scale, Row.Top + ( Row.Height - Font->LineSpan ) * 0.5f ), On ? Dress.inkHot : Style->Text, DropOpts[ Index ] );
         if ( Hit && Click && !DropFresh ) {
             if ( DropMany ) {
-                *DropBits ^= ( 1 << Index );
-                if ( ( *DropBits & ( ( 1 << DropCount ) - 1 ) ) == 0 )
-                    *DropBits = 1 << Index;
+                *DropBits = ui::ToggleBitmaskOption( *DropBits, Index, DropCount );
             } else {
                 *DropPick = Index;
                 DropId = nullptr;
@@ -891,9 +888,8 @@ static bool DrawSwatches( float Left, float Top, float Wide, int Count, const CC
     int Columns = SwatchColumns( Wide, Count, Scale );
     bool Busy = false;
     for ( int Index = 0; Index < Count; Index++ ) {
-        int Col = Index % Columns;
-        int Row = Index / Columns;
-        CRectangle Chip( Left + ( Size + Gap ) * ( float )Col, Top + ( Size + Gap ) * ( float )Row, Size, Size );
+        ui::RectBounds ChipB = ui::ComputeGridItemBounds( Left, Top, Size, Size, Gap, Gap, Columns, Index );
+        CRectangle Chip( ChipB.left, ChipB.top, ChipB.width, ChipB.height );
         bool Over = Chip.Contains( Point ) && !Moving( ) && !Menu.slide;
         char Id[ 64 ];
         snprintf( Id, sizeof( Id ), "%s.%d", Prefix, Index );
@@ -924,42 +920,10 @@ static bool DrawAction( const CRectangle& Row, const char* Label, const CVector&
     return Over && Click;
 }
 
-struct PageFit {
-    float inset;
-    float gap;
-    float head;
-    float general;
-    float target;
-    float silent;
-    float rageJump;
-    float rageNoclip;
-    float overlay;
-    float visual;
-    float theme;
-    float custom;
-    float misc;
-    float game;
-    float setOverlay;
-};
+using PageFit = ui::PageFit;
 
 static PageFit FitOf( float Scale ) {
-    PageFit Fit;
-    Fit.inset = 10.0f * Scale;
-    Fit.gap = 8.0f * Scale;
-    Fit.head = 36.0f * Scale;
-    Fit.general = 200.0f * Scale;
-    Fit.silent = 220.0f * Scale;
-    Fit.target = ( 276.0f + ( Aim.drawFov ? 32.0f : 0.0f ) ) * Scale;
-    Fit.rageJump = 128.0f * Scale;
-    Fit.rageNoclip = 58.0f * Scale;
-    Fit.overlay = 232.0f * Scale;
-    Fit.visual = 88.0f * Scale;
-    Fit.theme = 228.0f * Scale;
-    Fit.custom = 236.0f * Scale;
-    Fit.misc = ( 138.0f + ( Menu.limit ? 28.0f : 0.0f ) ) * Scale;
-    Fit.game = 160.0f * Scale;
-    Fit.setOverlay = 204.0f * Scale;
-    return Fit;
+    return ui::ComputePageFit( Scale, Aim.drawFov, Menu.limit );
 }
 
 #include "ui/tabs/tab_aimbot.hpp"
