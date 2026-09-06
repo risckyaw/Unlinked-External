@@ -26,6 +26,7 @@
 #include "silent.hpp"
 #include "weather.hpp"
 #include "gameplay.hpp"
+#include "aim.hpp"
 #include "ur/ur.hpp"
 #include "explorer.hpp"
 #include "browse.hpp"
@@ -1774,59 +1775,7 @@ static bool OverlayToView( const CVector& Overlay, float& X, float& Y ) {
 static bool EspDot( const world::Vec3& World, CVector& Out );
 
 static world::Vec3 AimPoint( const world::Actor& Item, bool UsePred, int Bones, bool AllowPred ) {
-    static const int Slot[ 6 ] = {
-        world::BoneHead, world::BoneUpper, world::BoneUpper,
-        world::BoneLower, world::BoneRoot, world::BoneLLegU
-    };
-    world::Vec3 Pos = Item.head;
-    if ( Bones & 1 ) {
-        Pos = Item.head;
-        if ( Item.high.y > Item.head.y )
-            Pos.y += ( Item.high.y - Item.head.y ) * 0.35f;
-    } else {
-        for ( int Index = 0; Index < 6; Index++ ) {
-            if ( ( Bones & ( 1 << Index ) ) == 0 )
-                continue;
-            int Bone = Slot[ Index ];
-            if ( Item.boneOk[ Bone ] ) {
-                Pos = Item.world[ Bone ];
-                if ( Index == 1 && Item.boneOk[ world::BoneHead ] ) {
-                    Pos.x = ( Item.head.x + Item.world[ Bone ].x ) * 0.5f;
-                    Pos.y = ( Item.head.y + Item.world[ Bone ].y ) * 0.5f;
-                    Pos.z = ( Item.head.z + Item.world[ Bone ].z ) * 0.5f;
-                }
-                break;
-            }
-        }
-    }
-    if ( !UsePred || !AllowPred )
-        return Pos;
-    float Speed = sqrtf( Item.vel.x * Item.vel.x + Item.vel.y * Item.vel.y + Item.vel.z * Item.vel.z );
-    if ( Speed < 1.5f )
-        return Pos;
-    world::Vec3 Vel = Item.vel;
-    if ( Speed > 90.0f ) {
-        Vel.x *= 90.0f / Speed;
-        Vel.y *= 90.0f / Speed;
-        Vel.z *= 90.0f / Speed;
-    }
-    const world::Snap& Live = world::View( );
-    float Mine = Live.localPing;
-    float Theirs = Item.ping > 0.0f ? Item.ping : Mine;
-    float Ping = ( Mine + Theirs ) * 0.5f;
-    if ( Ping > 0.25f )
-        Ping = 0.25f;
-    float Dist = Item.dist;
-    if ( Dist < 1.0f )
-        Dist = 1.0f;
-    float Time = Ping * 0.5f + Dist / 800.0f;
-    Time *= 0.80f;
-    if ( Time > 0.45f )
-        Time = 0.45f;
-    Pos.x += Vel.x * Time;
-    Pos.y += Vel.y * Time * 0.25f;
-    Pos.z += Vel.z * Time;
-    return Pos;
+    return aim::AimPoint( Item, UsePred, Bones, AllowPred, world::View( ).localPing );
 }
 
 static world::Vec3 AimPoint( const world::Actor& Item, bool UsePred = true ) {
@@ -1887,26 +1836,7 @@ static float AimRadius( float Scale, float Fov ) {
 }
 
 static world::Vec3 SilentBone( const world::Actor& Item ) {
-    static const int Slot[ 6 ] = {
-        world::BoneHead, world::BoneUpper, world::BoneUpper,
-        world::BoneLower, world::BoneRoot, world::BoneLLegU
-    };
-    if ( Mute.bones & 1 ) {
-        world::Vec3 Pos = Item.boneOk[ world::BoneHead ] ? Item.world[ world::BoneHead ] : Item.head;
-        if ( Item.high.y > Pos.y )
-            Pos.y += ( Item.high.y - Pos.y ) * 0.28f;
-        return Pos;
-    }
-    for ( int Index = 1; Index < 6; Index++ ) {
-        if ( ( Mute.bones & ( 1 << Index ) ) == 0 )
-            continue;
-        int Bone = Slot[ Index ];
-        if ( Item.boneOk[ Bone ] )
-            return Item.world[ Bone ];
-    }
-    if ( Item.boneOk[ world::BoneHead ] )
-        return Item.world[ world::BoneHead ];
-    return Item.head;
+    return aim::SilentBone( Item, Mute.bones );
 }
 
 static void TickAim( float Scale ) {
@@ -1986,22 +1916,9 @@ static void TickAim( float Scale ) {
             Consider( AimPoint( Item, Pred, Bones, Pred ) );
             if ( !OnScreen )
                 continue;
-            float Score = 0.0f;
-            if ( Sort <= 0 ) {
-                if ( Screen > Limit )
-                    continue;
-                Score = Screen;
-            } else if ( Sort == 1 ) {
-                if ( Screen > Limit )
-                    continue;
-                Score = Item.dist;
-            } else {
-                if ( Screen > Limit )
-                    continue;
-                float Sn = Limit > 1.0f ? Screen / Limit : Screen;
-                float Dn = Far > 1.0f ? Item.dist / Far : Item.dist;
-                Score = Sn * 0.5f + Dn * 0.5f;
-            }
+            float Score = aim::ScoreTarget( Screen, Limit, Item.dist, Far, Sort );
+            if ( Score >= 1.0e9f )
+                continue;
             if ( Score < BestScore ) {
                 BestScore = Score;
                 Best = &Item;
@@ -2026,29 +1943,7 @@ static void TickAim( float Scale ) {
         if ( Ghost ) {
             world::Vec3 AimAt = SilentBone( *Ghost );
             if ( Mute.pred ) {
-                float Speed = sqrtf( Ghost->vel.x * Ghost->vel.x + Ghost->vel.y * Ghost->vel.y + Ghost->vel.z * Ghost->vel.z );
-                if ( Speed >= 1.5f ) {
-                    world::Vec3 Vel = Ghost->vel;
-                    if ( Speed > 90.0f ) {
-                        Vel.x *= 90.0f / Speed;
-                        Vel.y *= 90.0f / Speed;
-                        Vel.z *= 90.0f / Speed;
-                    }
-                    float Ping = Snap.localPing;
-                    if ( Ghost->ping > 0.0f )
-                        Ping = ( Ping + Ghost->ping ) * 0.5f;
-                    if ( Ping > 0.25f )
-                        Ping = 0.25f;
-                    float Dist = Ghost->dist;
-                    if ( Dist < 1.0f )
-                        Dist = 1.0f;
-                    float Time = Ping * 0.25f + Dist / 1200.0f;
-                    if ( Time > 0.18f )
-                        Time = 0.18f;
-                    AimAt.x += Vel.x * Time;
-                    AimAt.y += Vel.y * Time * 0.25f;
-                    AimAt.z += Vel.z * Time;
-                }
+                AimAt = aim::PredictLeadSilent( AimAt, Ghost->vel, Ghost->dist, Snap.localPing, Ghost->ping );
             }
             world::Dot View;
             float Sx = 0.0f;
