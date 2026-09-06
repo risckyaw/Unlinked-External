@@ -252,6 +252,18 @@ inline bool Heap( uintptr_t Addr ) {
     return Addr >= 0x10000ull && Addr < 0x00007FFFFFFFFFFFull;
 }
 
+inline constexpr uint16_t FlagCanCollide = 0x08;
+inline constexpr uint16_t FlagCanTouch   = 0x20;
+inline constexpr uint16_t FlagBlockMask  = 0x28;
+
+inline bool HasBlockFlags( uint16_t Flags ) {
+    return ( Flags & FlagBlockMask ) != 0;
+}
+
+inline Vec3 ComputeHalfSize( const Vec3& Size ) {
+    return { Size.x * 0.5f, Size.y * 0.5f, Size.z * 0.5f };
+}
+
 inline void BindNt( ) {
     Engine& E = Core( );
     if ( E.ntRead )
@@ -1011,9 +1023,7 @@ inline bool PartFrame( uintptr_t Part, Vec3& Center, Vec3& Half, float* Rot ) {
     Vec3 Size;
     if ( !Pull( Prim + Core( ).off.primPos, Center ) || !Pull( Prim + Core( ).off.primSize, Size ) )
         return false;
-    Half.x = Size.x * 0.5f;
-    Half.y = Size.y * 0.5f;
-    Half.z = Size.z * 0.5f;
+    Half = ComputeHalfSize( Size );
     if ( Rot ) {
         Rot[ 0 ] = 1.0f; Rot[ 1 ] = 0.0f; Rot[ 2 ] = 0.0f;
         Rot[ 3 ] = 0.0f; Rot[ 4 ] = 1.0f; Rot[ 5 ] = 0.0f;
@@ -1693,7 +1703,7 @@ inline bool PartBlocks( uintptr_t Part ) {
     uint16_t Flags = 0;
     if ( !Pull( Prim + E.off.primFlags, Flags ) )
         return true;
-    return ( Flags & 0x28 ) != 0;
+    return HasBlockFlags( Flags );
 }
 
 inline bool IsSolid( const char* Kind ) {

@@ -210,3 +210,109 @@ TEST_CASE( "World: ActorClear multi-point line-of-sight checks" ) {
     // Restore engine state
     E.wallN = SavedWallN;
 }
+
+TEST_CASE( "World: Heap user-mode pointer address validation" ) {
+    // Null and low memory addresses (< 0x10000) are invalid
+    CHECK( !world::Heap( 0x0ull ) );
+    CHECK( !world::Heap( 0xFFFull ) );
+    CHECK( !world::Heap( 0xFFFFull ) );
+
+    // Boundary check at exactly 0x10000
+    CHECK( world::Heap( 0x10000ull ) );
+
+    // Typical valid 64-bit user-mode heap addresses
+    CHECK( world::Heap( 0x1A2B3C4D000ull ) );
+    CHECK( world::Heap( 0x7FF6ABCD0000ull ) );
+    CHECK( world::Heap( 0x00007FFFFFFFFFFEull ) );
+
+    // High kernel addresses (>= 0x00007FFFFFFFFFFFull) are invalid
+    CHECK( !world::Heap( 0x00007FFFFFFFFFFFull ) );
+    CHECK( !world::Heap( 0xFFFF800000000000ull ) );
+    CHECK( !world::Heap( 0xFFFFFFFFFFFFFFFFull ) );
+}
+
+TEST_CASE( "World: Collision flag masks (HasBlockFlags, FlagCanCollide, FlagCanTouch)" ) {
+    CHECK_EQ( ( int )world::FlagCanCollide, 0x08 );
+    CHECK_EQ( ( int )world::FlagCanTouch, 0x20 );
+    CHECK_EQ( ( int )world::FlagBlockMask, 0x28 );
+
+    // Zero flags: does not block
+    CHECK( !world::HasBlockFlags( 0 ) );
+
+    // CanCollide only: blocks
+    CHECK( world::HasBlockFlags( world::FlagCanCollide ) );
+
+    // CanTouch only: blocks
+    CHECK( world::HasBlockFlags( world::FlagCanTouch ) );
+
+    // Both flags combined: blocks
+    CHECK( world::HasBlockFlags( world::FlagBlockMask ) );
+
+    // Unrelated flags (e.g. 0x01, 0x02, 0x04, 0x10, 0x40, 0x80) do not block
+    CHECK( !world::HasBlockFlags( 0x01 ) );
+    CHECK( !world::HasBlockFlags( 0x02 ) );
+    CHECK( !world::HasBlockFlags( 0x04 ) );
+    CHECK( !world::HasBlockFlags( 0x10 ) );
+    CHECK( !world::HasBlockFlags( 0x40 ) );
+    CHECK( !world::HasBlockFlags( 0x100 ) );
+
+    // Mixed unrelated flags with CanCollide: blocks
+    CHECK( world::HasBlockFlags( 0x0100 | world::FlagCanCollide ) );
+}
+
+TEST_CASE( "World: ComputeHalfSize vector halving" ) {
+    world::Vec3 Size{ 4.0f, 6.0f, 10.0f };
+    world::Vec3 Half = world::ComputeHalfSize( Size );
+    CHECK_CLOSE( Half.x, 2.0f, 0.001f );
+    CHECK_CLOSE( Half.y, 3.0f, 0.001f );
+    CHECK_CLOSE( Half.z, 5.0f, 0.001f );
+
+    world::Vec3 Zero{ 0.0f, 0.0f, 0.0f };
+    world::Vec3 ZeroHalf = world::ComputeHalfSize( Zero );
+    CHECK_CLOSE( ZeroHalf.x, 0.0f, 0.001f );
+    CHECK_CLOSE( ZeroHalf.y, 0.0f, 0.001f );
+    CHECK_CLOSE( ZeroHalf.z, 0.0f, 0.001f );
+}
+
+TEST_CASE( "World: Euclidean distance calculation (Dist)" ) {
+    world::Vec3 P1{ 0.0f, 0.0f, 0.0f };
+    world::Vec3 P2{ 0.0f, 0.0f, 0.0f };
+    CHECK_CLOSE( world::Dist( P1, P2 ), 0.0f, 0.001f );
+
+    world::Vec3 P3{ 3.0f, 4.0f, 0.0f };
+    CHECK_CLOSE( world::Dist( P1, P3 ), 5.0f, 0.001f );
+
+    world::Vec3 P4{ 3.0f, 4.0f, 12.0f };
+    CHECK_CLOSE( world::Dist( P1, P4 ), 13.0f, 0.001f );
+}
+
+TEST_CASE( "World: Matrix projection (Project) boundary and clipping" ) {
+    // Create a 4x4 matrix: identity with perspective projection along Z
+    // Matrix row-major:
+    // [ 1  0  0  0 ]
+    // [ 0  1  0  0 ]
+    // [ 0  0  1  0 ]
+    // [ 0  0  1  0 ] -> W = Z
+    float Matrix[ 16 ] = {
+        1.0f, 0.0f, 0.0f, 0.0f,
+        0.0f, 1.0f, 0.0f, 0.0f,
+        0.0f, 0.0f, 1.0f, 0.0f,
+        0.0f, 0.0f, 1.0f, 0.0f
+    };
+
+    world::Dot Screen;
+
+    // Behind camera: Z = 0.01 (W < 0.05f) returns false
+    CHECK( !world::Project( world::Vec3{ 0.0f, 0.0f, 0.01f }, Matrix, 1920, 1080, Screen ) );
+
+    // Center screen: (0, 0, 10) -> X/W = 0, Y/W = 0 -> (960, 540)
+    CHECK( world::Project( world::Vec3{ 0.0f, 0.0f, 10.0f }, Matrix, 1920, 1080, Screen ) );
+    CHECK( Screen.ok );
+    CHECK_CLOSE( Screen.x, 960.0f, 0.001f );
+    CHECK_CLOSE( Screen.y, 540.0f, 0.001f );
+
+    // Extremely off-screen point (> 200px outside screen)
+    // At X = 50, Z = 10 -> X/W = 5 -> Screen.x = 960 + 5 * 960 = 5760 (out of bounds)
+    world::Project( world::Vec3{ 50.0f, 0.0f, 10.0f }, Matrix, 1920, 1080, Screen );
+    CHECK( !Screen.ok );
+}
