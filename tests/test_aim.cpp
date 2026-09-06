@@ -119,3 +119,126 @@ TEST_CASE( "Aim: ScoreTarget heuristics" ) {
     float Balanced = aim::ScoreTarget( 45.0f, FovLimit, 100.0f, FarDist, 2 );
     CHECK( Balanced > 0.31f && Balanced < 0.32f );
 }
+
+TEST_CASE( "Aim: ClampAimDt boundary enforcement" ) {
+    CHECK_EQ( aim::ClampAimDt( 0.00010f ), 0.00025f );
+    CHECK_EQ( aim::ClampAimDt( 0.00025f ), 0.00025f );
+    CHECK_EQ( aim::ClampAimDt( 0.01666f ), 0.01666f );
+    CHECK_EQ( aim::ClampAimDt( 0.05000f ), 0.05000f );
+    CHECK_EQ( aim::ClampAimDt( 0.10000f ), 0.05000f );
+}
+
+TEST_CASE( "Aim: Deadzone and target validity checks" ) {
+    // Within deadzone (default threshold squared = 4.0f)
+    CHECK( aim::IsWithinDeadzone( 1.0f, 1.0f ) );       // 1 + 1 = 2 < 4
+    CHECK( aim::IsWithinDeadzone( 0.0f, 1.9f ) );       // 3.61 < 4
+    CHECK( !aim::IsWithinDeadzone( 2.0f, 0.0f ) );      // 4 >= 4
+    CHECK( !aim::IsWithinDeadzone( 5.0f, 5.0f ) );
+
+    // IsTargetValid checks
+    // Teammate filtering
+    CHECK( !aim::IsTargetValid( true, true, true, false ) );   // mate + filterTeam -> invalid
+    CHECK( aim::IsTargetValid( true, true, false, false ) );    // mate without filterTeam -> valid
+    CHECK( aim::IsTargetValid( false, true, true, false ) );   // enemy + filterTeam -> valid
+
+    // Visibility filtering
+    CHECK( !aim::IsTargetValid( false, false, false, true ) );  // invisible + filterVis -> invalid
+    CHECK( aim::IsTargetValid( false, false, false, false ) );  // invisible without filterVis -> valid
+    CHECK( aim::IsTargetValid( false, true, false, true ) );   // visible + filterVis -> valid
+}
+
+TEST_CASE( "Aim: ComputeSmoothParams piecewise tiers" ) {
+    // T = 0% (Smooth = 0.0f)
+    aim::SmoothParams P0 = aim::ComputeSmoothParams( 0.0f );
+    CHECK_EQ( P0.tau, 0.012f );
+    CHECK_EQ( P0.capPx, 18000.0f );
+
+    // T = 5% (Smooth = 5.0f)
+    aim::SmoothParams P5 = aim::ComputeSmoothParams( 5.0f );
+    CHECK( fabsf( P5.tau - 0.040f ) < 0.001f );
+    CHECK( fabsf( P5.capPx - 14000.0f ) < 1.0f );
+
+    // T = 50% (Smooth = 50.0f)
+    aim::SmoothParams P50 = aim::ComputeSmoothParams( 50.0f );
+    CHECK( fabsf( P50.tau - 0.40f ) < 0.001f );
+    CHECK( fabsf( P50.capPx - 1400.0f ) < 1.0f );
+
+    // T = 100% (Smooth = 100.0f)
+    aim::SmoothParams P100 = aim::ComputeSmoothParams( 100.0f );
+    CHECK( fabsf( P100.tau - 2.40f ) < 0.001f );
+    CHECK( fabsf( P100.capPx - 80.0f ) < 1.0f );
+
+    // Clamping on negative and overflow
+    aim::SmoothParams PNeg = aim::ComputeSmoothParams( -25.0f );
+    CHECK_EQ( PNeg.tau, P0.tau );
+    CHECK_EQ( PNeg.capPx, P0.capPx );
+
+    aim::SmoothParams POver = aim::ComputeSmoothParams( 200.0f );
+    CHECK_EQ( POver.tau, P100.tau );
+    CHECK_EQ( POver.capPx, P100.capPx );
+}
+
+TEST_CASE( "Aim: ComputeSmoothMouseStep deadzone behavior" ) {
+    float RestX = 0.0f;
+    float RestY = 0.0f;
+    aim::MouseStep Step = aim::ComputeSmoothMouseStep( 1.0f, 1.0f, 20.0f, 0.016f, RestX, RestY );
+    CHECK( !Step.moved );
+    CHECK_EQ( Step.moveX, 0 );
+    CHECK_EQ( Step.moveY, 0 );
+    CHECK_EQ( RestX, 0.0f );
+    CHECK_EQ( RestY, 0.0f );
+}
+
+TEST_CASE( "Aim: ComputeSmoothMouseStep instant snap mode" ) {
+    // Smooth < 0.5 (T < 0.005) is instant snap with 22px cap
+    float RestX = 0.0f;
+    float RestY = 0.0f;
+    // Step exceeding 22.0f cap
+    aim::MouseStep Step = aim::ComputeSmoothMouseStep( 100.0f, 0.0f, 0.0f, 0.016f, RestX, RestY );
+    CHECK( Step.moved );
+    CHECK_EQ( Step.moveX, 22 );
+    CHECK_EQ( Step.moveY, 0 );
+    CHECK( fabsf( RestX ) < 0.01f );
+
+    // Step within 22.0f cap
+    RestX = 0.0f;
+    RestY = 0.0f;
+    aim::MouseStep StepSmall = aim::ComputeSmoothMouseStep( 15.0f, 0.0f, 0.0f, 0.016f, RestX, RestY );
+    CHECK( StepSmall.moved );
+    CHECK_EQ( StepSmall.moveX, 15 );
+    CHECK_EQ( StepSmall.moveY, 0 );
+}
+
+TEST_CASE( "Aim: ComputeSmoothMouseStep subpixel integration" ) {
+    float RestX = 0.0f;
+    float RestY = 0.0f;
+
+    // Small step where fractional movement accumulates into RestX/RestY
+    aim::MouseStep S1 = aim::ComputeSmoothMouseStep( 10.0f, 0.0f, 50.0f, 0.001f, RestX, RestY );
+    // At T=0.50, Tau=0.40, Dt=0.001, Alpha ~ 1 - exp(-0.001/0.40) ~ 0.002497
+    // Dx * Alpha ~ 0.025. Rounded integer MoveX is 0, so RestX retains ~0.025
+    if ( !S1.moved ) {
+        CHECK_EQ( S1.moveX, 0 );
+        CHECK( RestX > 0.0f );
+    }
+
+    // Now test a standard delta with realistic frame time (60 FPS, Dt = 0.0166f, Smooth = 20.0f)
+    RestX = 0.0f;
+    RestY = 0.0f;
+    aim::MouseStep S2 = aim::ComputeSmoothMouseStep( 80.0f, -60.0f, 20.0f, 0.0166f, RestX, RestY );
+    CHECK( S2.moved );
+    CHECK( S2.moveX > 0 );
+    CHECK( S2.moveY < 0 );
+    // Remainder should be strictly within (-0.5f, 0.5f)
+    CHECK( RestX > -0.5f && RestX < 0.5f );
+    CHECK( RestY > -0.5f && RestY < 0.5f );
+}
+
+TEST_CASE( "Aim: ComputeFovPulse bounds and oscillation" ) {
+    for ( double Time = 0.0; Time < 10.0; Time += 0.25 ) {
+        float Pulse = aim::ComputeFovPulse( Time );
+        // Pulse formula: 0.7f + 0.3f * [0, 1] => range is [0.70f, 1.00f]
+        CHECK( Pulse >= 0.699f && Pulse <= 1.001f );
+    }
+}
+

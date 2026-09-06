@@ -1649,10 +1649,7 @@ static void TickAim( float Scale ) {
     QueryPerformanceCounter( &Now );
     float Dt = ( float )( Now.QuadPart - Last.QuadPart ) / ( float )Freq.QuadPart;
     Last = Now;
-    if ( Dt < 0.00025f )
-        Dt = 0.00025f;
-    if ( Dt > 0.05f )
-        Dt = 0.05f;
+    Dt = aim::ClampAimDt( Dt );
 
     bool ListenBusy = Mute.listen || Aim.listen || Menu.listen || Menu.slide;
     bool MuteHeld = Held( Mute.key );
@@ -1772,9 +1769,7 @@ static void TickAim( float Scale ) {
             const world::Actor& Item = Snap.list[ Index ];
             if ( Item.player != Hold )
                 continue;
-            if ( Aim.team && Item.mate )
-                break;
-            if ( Aim.vis && !Item.vis )
+            if ( !aim::IsTargetValid( Item.mate, Item.vis, Aim.team, Aim.vis ) )
                 break;
             if ( AimDot( AimPoint( Item ), BestAt ) )
                 Best = &Item;
@@ -1790,64 +1785,13 @@ static void TickAim( float Scale ) {
     Hold = Best->player;
     float Dx = BestAt.Horizontal - Mid.Horizontal;
     float Dy = BestAt.Vertical - Mid.Vertical;
-    if ( Dx * Dx + Dy * Dy < 4.0f )
+    aim::MouseStep Mouse = aim::ComputeSmoothMouseStep( Dx, Dy, Aim.smooth, Dt, RestX, RestY );
+    if ( !Mouse.moved )
         return;
-    float T = Aim.smooth / 100.0f;
-    if ( T < 0.0f )
-        T = 0.0f;
-    if ( T > 1.0f )
-        T = 1.0f;
-    float Tau = 0.035f;
-    float CapPx = 14000.0f;
-    if ( T <= 0.05f ) {
-        Tau = 0.012f + ( T / 0.05f ) * 0.028f;
-        CapPx = 18000.0f - ( T / 0.05f ) * 4000.0f;
-    } else if ( T <= 0.50f ) {
-        float U = ( T - 0.05f ) / 0.45f;
-        Tau = 0.040f + U * 0.36f;
-        CapPx = 14000.0f - U * 12600.0f;
-    } else {
-        float U = ( T - 0.50f ) / 0.50f;
-        Tau = 0.40f + U * 2.00f;
-        CapPx = 1400.0f - U * 1320.0f;
-    }
-    if ( Tau < 0.008f )
-        Tau = 0.008f;
-    float Alpha = 1.0f - expf( -Dt / Tau );
-    if ( T < 0.005f ) {
-        Alpha = 1.0f;
-        float Cap = 22.0f;
-        float Step = sqrtf( Dx * Dx + Dy * Dy );
-        if ( Step > Cap ) {
-            Dx *= Cap / Step;
-            Dy *= Cap / Step;
-        }
-    } else {
-        float Step = sqrtf( Dx * Dx + Dy * Dy ) * Alpha;
-        float MaxStep = CapPx * Dt;
-        if ( MaxStep < 0.35f )
-            MaxStep = 0.35f;
-        if ( Step > MaxStep && Step > 0.001f ) {
-            float ScaleStep = MaxStep / Step;
-            Alpha *= ScaleStep;
-        }
-    }
-    if ( Alpha < 0.0f )
-        Alpha = 0.0f;
-    if ( Alpha > 1.0f )
-        Alpha = 1.0f;
-    RestX += Dx * Alpha;
-    RestY += Dy * Alpha;
-    int MoveX = ( int )( RestX >= 0.0f ? RestX + 0.5f : RestX - 0.5f );
-    int MoveY = ( int )( RestY >= 0.0f ? RestY + 0.5f : RestY - 0.5f );
-    if ( MoveX == 0 && MoveY == 0 )
-        return;
-    RestX -= ( float )MoveX;
-    RestY -= ( float )MoveY;
     INPUT Step{ };
     Step.type = INPUT_MOUSE;
-    Step.mi.dx = MoveX;
-    Step.mi.dy = MoveY;
+    Step.mi.dx = Mouse.moveX;
+    Step.mi.dy = Mouse.moveY;
     Step.mi.dwFlags = MOUSEEVENTF_MOVE;
     SendInput( 1, &Step, sizeof( Step ) );
 }
@@ -1862,7 +1806,7 @@ static bool EspDot( const world::Vec3& World, CVector& Out ) {
 
 static void DrawFovRings( float Scale ) {
     CVector Mid = AimMid( );
-    float Pulse = 0.7f + 0.3f * ( 0.5f + 0.5f * sinf( ( float )Context->Elapsed * 1.8f ) );
+    float Pulse = aim::ComputeFovPulse( Context->Elapsed );
     float Keep = Canvas->Opacity;
     if ( Aim.on && Aim.drawFov ) {
         float Ring = ur::motion::toward( "aim.fov.ring", 1.0f, 18.0f );
