@@ -24,5 +24,9 @@
   "buildPresets": [
     { "name": "windows-debug", "configurePreset": "windows-debug" },
     { "name": "windows-release", "configurePreset": "windows-release" }
+  ],
+  "testPresets": [
+    { "name": "windows-debug", "configurePreset": "windows-debug" },
+    { "name": "windows-release", "configurePreset": "windows-release" }
   ]
 }

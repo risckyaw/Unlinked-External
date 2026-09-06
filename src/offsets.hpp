@@ -523,4 +523,24 @@ inline bool Stale( ) {
     return Data( ).stale;
 }
 
+inline bool ExtractVersion( const char* Path, char* Out, int Cap ) {
+    if ( !Path || !Out || Cap < 8 )
+        return false;
+    Out[ 0 ] = 0;
+    const char* Found = strstr( Path, "version-" );
+    if ( !Found )
+        return false;
+    lstrcpynA( Out, Found, Cap );
+    char* Cut = strpbrk( Out, "\\/" );
+    if ( Cut )
+        *Cut = 0;
+    return Out[ 0 ] != 0;
+}
+
+inline bool IsVersionMatch( const char* ClientVer, const char* DumpVer ) {
+    if ( !ClientVer || !DumpVer || !ClientVer[ 0 ] || !DumpVer[ 0 ] )
+        return false;
+    return _stricmp( ClientVer, DumpVer ) == 0;
+}
+
 }

@@ -28,6 +28,18 @@ if( MSVC )
     target_compile_options( Unlinked PRIVATE /W4 /utf-8 /EHsc )
 endif( )
 
+target_precompile_headers( Unlinked PRIVATE
+    <Windows.h>
+    <cmath>
+    <cstdint>
+    <cstdio>
+    <cstring>
+    <string>
+    <vector>
+    <memory>
+    <chrono>
+)
+
 set_target_properties( Unlinked PROPERTIES
     VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
@@ -71,4 +83,46 @@ add_custom_command( TARGET Unlinked POST_BUILD
         "${FONT_DIR}/Inter-SemiBold.ttf"
         "$<TARGET_FILE_DIR:Unlinked>/assets/fonts/Inter-SemiBold.ttf"
 )
+
+enable_testing( )
+
+add_executable( UnlinkedTests
+    tests/test_main.cpp
+    tests/test_math.cpp
+    tests/test_store.cpp
+    tests/test_offsets.cpp
+    tests/test_handle.cpp
+    tests/test_geometry.cpp
+    tests/test_weather.cpp
+    tests/test_move.cpp
+    tests/test_sense.cpp
+    tests/test_browse.cpp
+    tests/test_catalog.cpp
+    tests/test_gameplay.cpp
+    tests/test_silent.cpp
+    tests/test_aim.cpp
+    tests/test_world_visibility.cpp
+    tests/test_key_labels.cpp
+    tests/test_layout.cpp
+    tests/test_esp.cpp
+)
+target_link_libraries( UnlinkedTests PRIVATE winhttp )
+target_include_directories( UnlinkedTests PRIVATE src tests )
+if( MSVC )
+    target_compile_options( UnlinkedTests PRIVATE /W4 /utf-8 /EHsc )
+endif( )
+
+target_precompile_headers( UnlinkedTests PRIVATE
+    <cmath>
+    <cstdint>
+    <cstdio>
+    <cstdlib>
+    <cstring>
+    <string>
+    <vector>
+    <Windows.h>
+)
+
+add_test( NAME UnlinkedTests COMMAND UnlinkedTests )
+
 

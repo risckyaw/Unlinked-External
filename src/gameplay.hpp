@@ -14,45 +14,48 @@
 
 namespace play {
 
+inline bool UpdateFramerateCap( std::string& Body, bool Uncap ) {
+    const char* Key = "<int name=\"FramerateCap\">";
+    size_t At = Body.find( Key );
+    if ( At == std::string::npos )
+        return false;
+    size_t Start = At + strlen( Key );
+    size_t End = Body.find( "</", Start );
+    if ( End == std::string::npos )
+        return false;
+    Body.replace( Start, End - Start, Uncap ? "10000" : "240" );
+    return true;
+}
+
 inline void PatchXml( bool Uncap ) {
     char Path[ MAX_PATH ] = { };
     char Root[ MAX_PATH ] = { };
     if ( GetEnvironmentVariableA( "LOCALAPPDATA", Root, MAX_PATH ) == 0 || !Root[ 0 ] )
         return;
     snprintf( Path, sizeof( Path ), "%s\\Roblox\\GlobalBasicSettings_13.xml", Root );
-    HANDLE File = CreateFileA( Path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr );
-    if ( File == INVALID_HANDLE_VALUE )
+    unlinked::UniqueHandle File( CreateFileA( Path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr ) );
+    if ( !File )
         return;
-    DWORD Size = GetFileSize( File, nullptr );
+    DWORD Size = GetFileSize( File.get( ), nullptr );
     if ( Size == 0 || Size > 1u << 20 ) {
-        CloseHandle( File );
         return;
     }
     std::string Body;
     Body.resize( Size );
     DWORD Got = 0;
-    if ( !ReadFile( File, Body.data( ), Size, &Got, nullptr ) ) {
-        CloseHandle( File );
+    if ( !ReadFile( File.get( ), Body.data( ), Size, &Got, nullptr ) ) {
         return;
     }
-    CloseHandle( File );
+    File.reset( );
 
-    const char* Key = "<int name=\"FramerateCap\">";
-    size_t At = Body.find( Key );
-    if ( At == std::string::npos )
+    if ( !UpdateFramerateCap( Body, Uncap ) )
         return;
-    size_t Start = At + strlen( Key );
-    size_t End = Body.find( "</", Start );
-    if ( End == std::string::npos )
-        return;
-    Body.replace( Start, End - Start, Uncap ? "10000" : "240" );
 
-    File = CreateFileA( Path, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr );
-    if ( File == INVALID_HANDLE_VALUE )
+    File.reset( CreateFileA( Path, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr ) );
+    if ( !File )
         return;
     DWORD Put = 0;
-    WriteFile( File, Body.data( ), ( DWORD )Body.size( ), &Put, nullptr );
-    CloseHandle( File );
+    WriteFile( File.get( ), Body.data( ), ( DWORD )Body.size( ), &Put, nullptr );
 }
 
 inline void TickAfk( bool On, double Dt ) {

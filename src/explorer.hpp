@@ -5,7 +5,9 @@
  * @brief Unlinked External - In-game instance tree explorer, class search, and hierarchy manipulation.
  */
 
+#include <cstdint>
 #include <cstring>
+#include <vector>
 #include "explorer_icons.h"
 
 enum class TreeIcon : int {
@@ -84,6 +86,7 @@ inline constexpr TreeNode TreeNodes[ ] = {
 
 inline constexpr int TreeNodeCount = ( int )( sizeof( TreeNodes ) / sizeof( TreeNodes[ 0 ] ) );
 
+#if __has_include(<ur/app.hpp>)
 inline unsigned long long PngIcon( const std::vector< uint8_t >& Bytes ) {
     CGraphics* Gfx = ur::app::graphics( );
     if ( !Gfx || Bytes.empty( ) )
@@ -140,6 +143,7 @@ inline unsigned long long TreeGlyph( TreeIcon Icon ) {
     Cache[ Index ] = PngIcon( *Bytes );
     return Cache[ Index ];
 }
+#endif
 
 inline TreeIcon IconFor( const char* Klass ) {
     if ( !Klass || !Klass[ 0 ] )

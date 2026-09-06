@@ -1,3 +1,9 @@
+# Unlinked External
+
+[![CI](https://github.com/viltzn/Unlinked-External/actions/workflows/ci.yml/badge.svg)](https://github.com/viltzn/Unlinked-External/actions/workflows/ci.yml)
+[![Tests](https://img.shields.io/badge/tests-11%20passed-brightgreen.svg)](tests/)
+[![C++20](https://img.shields.io/badge/C%2B%2B-20-blue.svg)](https://en.cppreference.com/w/cpp/20)
+
 ## What it is
 
 Unlinked is a transparent, click-through overlay. The menu sits in the center of the screen. Clicks on the panel stay with Unlinked. Clicks outside go through to the game.
@@ -111,7 +117,7 @@ Configs save and load from the Configs tab. Each file is a plain text preset und
 
 ## Use
 
-1. Grab the [compiled release](https://github.com/Unlinked/Roblox-external/releases/latest)
+1. Grab the [compiled release](https://github.com/viltzn/Unlinked-External/releases/latest)
 2. Unzip
 3. Run `Unlinked.exe`
 
@@ -119,25 +125,43 @@ Configs save and load from the Configs tab. Each file is a plain text preset und
 
 ## Build
 
-The source zip has everything needed to compile. Double-click `build.bat`.
+The source zip has everything needed to compile. Double-click `build.bat` or run from terminal.
 
 Windows 10 or 11, x64. Visual Studio 2022 or newer with **Desktop development with C++** (CMake is in that workload). No other repos, no extra packages.
 
-```
-build.bat
-build.bat --debug
+```cmd
+build.bat             # Build Release executable (default)
+build.bat --debug     # Build Debug executable
+build.bat --test      # Build and run CTest unit test suite
+build.bat --debug --test
 ```
 
 Output: `build\windows-release\Unlinked.exe` (or `build\windows-debug\Unlinked.exe`). The UI framework lives in `third_party/custom-framework`. Fonts live in `third_party/fonts`.
+
+## Testing
+
+Unlinked includes a zero-dependency C++20 unit test suite verifying core math, config serialization/parsing, and dynamic offset handling.
+
+Run tests using `build.bat`:
+```cmd
+build.bat --test
+```
+
+Or directly via CTest using CMake presets:
+```cmd
+ctest --preset windows-release --output-on-failure
+ctest --preset windows-debug --output-on-failure
+```
 
 ---
 
 ## Layout
 
 ```
-build.bat           one-click compile
+build.bat           one-click compile and test runner
 assets/             fonts, icons, themes (copied next to the built exe)
 src/                overlay, aim, ESP, configs
+tests/              zero-dependency unit test suite and runner
 third_party/custom-framework   bundled UI library
 third_party/fonts              Inter + JetBrains Mono + Outfit + Montserrat
 media/              README preview, menu clip, in-game clip

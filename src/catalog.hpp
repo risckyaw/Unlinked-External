@@ -7,7 +7,9 @@
 
 #include "ice.hpp"
 
+#if __has_include("Shaders.h")
 #include "Shaders.h"
+#endif
 
 namespace skin {
 
@@ -214,6 +216,7 @@ inline unsigned int effect( ) {
         Look = 0;
     if ( Tone < 0 || Tone >= ToneCount )
         Tone = 0;
+#if __has_include("Shaders.h")
     if ( Handles[ Look ][ Tone ] == 0 ) {
         const float* Deep = deep( Tone );
         const float* Mid = mid( Tone );
@@ -223,6 +226,7 @@ inline unsigned int effect( ) {
             : Tinted( Atmosphere( Look ), Tone );
         Handles[ Look ][ Tone ] = Shaders->Compose( lookName( Look ), Body );
     }
+#endif
     return Handles[ Look ][ Tone ];
 }
 
