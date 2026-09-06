@@ -30,10 +30,8 @@ static bool DrawAimSilent( const CRectangle& Body, const CVector& Point, bool Cl
     static const char* Bones[ ] = { "Head", "Neck", "Chest", "Stomach", "Body", "Legs" };
     float Pad = 14.0f * Scale;
     float Gap = 16.0f * Scale;
-    float Inner = Body.Width - Pad * 2.0f;
-    float Col = ( Inner - Gap ) * 0.5f;
-    float Left = Body.Left + Pad;
-    float Right = Left + Col + Gap;
+    float Left = 0.0f, Right = 0.0f, Col = 0.0f;
+    ui::ComputeTwoColumnPartition( Body.Left, Body.Width, Pad, Gap, Left, Right, Col );
     float Top = Body.Top + 12.0f * Scale;
     float Row = 30.0f * Scale;
     bool Busy = false;

@@ -405,7 +405,7 @@ static void Clamp( float Across, float Vertical, float Wide, float Tall ) {
 
 static void Gate( bool Over, const CVector& Point ) {
     ur::overlay::Options& Overlay = ur::app::overlay_options( );
-    bool Through = !Over && !Moving( ) && !Menu.slide;
+    bool Through = ui::ComputeClickThrough( Over, Moving( ), Menu.slide );
     if ( Overlay.click_through != Through )
         Overlay.click_through = Through;
 
@@ -895,7 +895,7 @@ static bool DrawSwatches( float Left, float Top, float Wide, int Count, const CC
 }
 
 static bool DrawAction( const CRectangle& Row, const char* Label, const CVector& Point, bool Click, float Scale, bool Danger ) {
-    bool Over = Row.Contains( Point ) && !Moving( ) && !Menu.slide;
+    bool Over = ui::IsWidgetHovered( Row.Contains( Point ), Moving( ), Menu.slide );
     float Tone = ur::motion::toward( Label, Over ? 1.0f : 0.0f, 26.0f );
     float Round = 6.0f * Scale;
     if ( Over )
@@ -907,7 +907,9 @@ static bool DrawAction( const CRectangle& Row, const char* Label, const CVector&
     CColor Ink = Danger
         ? Mix( CColor( 214, 220, 232 ), CColor( 232, 64, 72 ), Tone )
         : Mix( Style->Text, Dress.inkHot, Tone );
-    Canvas->Text( CVector( Row.Left + ( Row.Width - Size.Horizontal ) * 0.5f, Row.Top + ( Row.Height - Font->LineSpan ) * 0.5f ), Ink, Label );
+    float TextX = 0.0f, TextY = 0.0f;
+    ui::ComputeCenteredTextPos( Row.Left, Row.Top, Row.Width, Row.Height, Size.Horizontal, Font->LineSpan, TextX, TextY );
+    Canvas->Text( CVector( TextX, TextY ), Ink, Label );
     return Over && Click;
 }
 
@@ -1409,7 +1411,7 @@ static CRectangle PlaceMark( float Across, float Vertical, float Scale, CFont* F
     float Tall = 0.0f;
     ui::ComputeBadgeSize( Size.Horizontal, Size.Vertical, Scale, Wide, Tall );
     if ( !Badge.ready ) {
-        Badge.origin = CVector( 14.0f * Scale, Vertical - Tall - 14.0f * Scale );
+        ui::ComputeDefaultBadgeOrigin( Vertical, Tall, Scale, 14.0f, Badge.origin.Horizontal, Badge.origin.Vertical );
         Badge.ready = true;
     }
     ClampBox( Badge.origin, Across, Vertical, Wide, Tall );

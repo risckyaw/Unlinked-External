@@ -485,5 +485,33 @@ inline RectBounds ComputeCircleBounds( float CenterX, float CenterY, float Radiu
     return RectBounds{ CenterX - Radius, CenterY - Radius, Radius * 2.0f, Radius * 2.0f };
 }
 
+inline void ComputeCenteredTextPos( float BoxLeft, float BoxTop, float BoxWidth, float BoxHeight,
+                                    float TextWidth, float TextHeight, float& OutX, float& OutY ) {
+    OutX = BoxLeft + ( BoxWidth - TextWidth ) * 0.5f;
+    OutY = BoxTop + ( BoxHeight - TextHeight ) * 0.5f;
+}
+
+inline bool ComputeClickThrough( bool IsHovered, bool IsMoving, bool IsSliding ) {
+    return !IsHovered && !IsMoving && !IsSliding;
+}
+
+inline bool IsWidgetHovered( bool ContainsPoint, bool IsMoving, bool IsSliding ) {
+    return ContainsPoint && !IsMoving && !IsSliding;
+}
+
+inline void ComputeDefaultBadgeOrigin( float ScreenHeight, float BadgeHeight, float Scale,
+                                       float Margin, float& OutX, float& OutY ) {
+    OutX = Margin * Scale;
+    OutY = ScreenHeight - BadgeHeight - Margin * Scale;
+}
+
+inline void ComputeTwoColumnPartition( float ContainerLeft, float ContainerWidth, float Padding, float Gap,
+                                       float& OutLeft, float& OutRight, float& OutColWidth ) {
+    float Inner = ContainerWidth - Padding * 2.0f;
+    OutColWidth = ( Inner - Gap ) * 0.5f;
+    OutLeft = ContainerLeft + Padding;
+    OutRight = OutLeft + OutColWidth + Gap;
+}
+
 }
 

@@ -755,6 +755,70 @@ TEST_CASE( "Layout: ComputeCircleBounds centered bounding box" ) {
     CHECK_CLOSE( Zero.height, 0.0f, 0.001f );
 }
 
+TEST_CASE( "Layout: ComputeCenteredTextPos centering inside box" ) {
+    float OutX = 0.0f, OutY = 0.0f;
+
+    // 200x50 box at (100, 200), text is 80x20
+    ui::ComputeCenteredTextPos( 100.0f, 200.0f, 200.0f, 50.0f, 80.0f, 20.0f, OutX, OutY );
+    // OutX = 100 + (200 - 80) * 0.5 = 160
+    // OutY = 200 + (50 - 20) * 0.5 = 215
+    CHECK_CLOSE( OutX, 160.0f, 0.001f );
+    CHECK_CLOSE( OutY, 215.0f, 0.001f );
+
+    // Text identical size to box
+    ui::ComputeCenteredTextPos( 50.0f, 60.0f, 100.0f, 40.0f, 100.0f, 40.0f, OutX, OutY );
+    CHECK_CLOSE( OutX, 50.0f, 0.001f );
+    CHECK_CLOSE( OutY, 60.0f, 0.001f );
+}
+
+TEST_CASE( "Layout: ComputeClickThrough and IsWidgetHovered state gates" ) {
+    // Click through only when NOT hovered, NOT moving, NOT sliding
+    CHECK( ui::ComputeClickThrough( false, false, false ) );
+    CHECK( !ui::ComputeClickThrough( true, false, false ) );
+    CHECK( !ui::ComputeClickThrough( false, true, false ) );
+    CHECK( !ui::ComputeClickThrough( false, false, true ) );
+    CHECK( !ui::ComputeClickThrough( true, true, true ) );
+
+    // Widget hovered only when contains point, NOT moving, NOT sliding
+    CHECK( ui::IsWidgetHovered( true, false, false ) );
+    CHECK( !ui::IsWidgetHovered( false, false, false ) );
+    CHECK( !ui::IsWidgetHovered( true, true, false ) );
+    CHECK( !ui::IsWidgetHovered( true, false, true ) );
+    CHECK( !ui::IsWidgetHovered( true, true, true ) );
+}
+
+TEST_CASE( "Layout: ComputeDefaultBadgeOrigin bottom-left positioning" ) {
+    float X = 0.0f, Y = 0.0f;
+
+    // 1080p screen, badge height 32, scale 1.0f, default margin 14.0f
+    ui::ComputeDefaultBadgeOrigin( 1080.0f, 32.0f, 1.0f, 14.0f, X, Y );
+    CHECK_CLOSE( X, 14.0f, 0.001f );
+    CHECK_CLOSE( Y, 1034.0f, 0.001f ); // 1080 - 32 - 14 = 1034
+
+    // 1440p screen, badge height 48, scale 1.5f, default margin 14.0f
+    ui::ComputeDefaultBadgeOrigin( 1440.0f, 48.0f, 1.5f, 14.0f, X, Y );
+    CHECK_CLOSE( X, 21.0f, 0.001f ); // 14 * 1.5 = 21
+    CHECK_CLOSE( Y, 1371.0f, 0.001f ); // 1440 - 48 - 21 = 1371
+}
+
+TEST_CASE( "Layout: ComputeTwoColumnPartition symmetric column geometry" ) {
+    float Left = 0.0f, Right = 0.0f, ColW = 0.0f;
+
+    // Container at 100, width 400, pad 14, gap 16
+    // Inner = 400 - 28 = 372
+    // ColW = (372 - 16) * 0.5 = 178
+    // Left = 100 + 14 = 114
+    // Right = 114 + 178 + 16 = 308
+    ui::ComputeTwoColumnPartition( 100.0f, 400.0f, 14.0f, 16.0f, Left, Right, ColW );
+    CHECK_CLOSE( Left, 114.0f, 0.001f );
+    CHECK_CLOSE( Right, 308.0f, 0.001f );
+    CHECK_CLOSE( ColW, 178.0f, 0.001f );
+
+    // Verify symmetry: Right + ColW + Pad == ContainerLeft + ContainerWidth
+    CHECK_CLOSE( Right + ColW + 14.0f, 100.0f + 400.0f, 0.001f );
+}
+
+
 
 
 
