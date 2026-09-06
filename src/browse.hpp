@@ -99,6 +99,45 @@ inline bool Hits( const Node& Item, const char* Query ) {
     return IContains( Item.name, Query ) || IContains( Item.klass, Query );
 }
 
+inline void FormatBreadcrumbPath( const char* const* Names, int Count, char* Out, size_t Cap ) {
+    if ( !Out || Cap < 2 )
+        return;
+    Out[ 0 ] = 0;
+    for ( int Index = 0; Index < Count; Index++ ) {
+        const char* Name = ( Names && Names[ Index ] && Names[ Index ][ 0 ] ) ? Names[ Index ] : "Inst";
+        if ( Out[ 0 ] )
+            strncat_s( Out, Cap, ".", _TRUNCATE );
+        strncat_s( Out, Cap, Name, _TRUNCATE );
+    }
+}
+
+inline void FormatVec3( const world::Vec3& Pos, char* Out, size_t Cap ) {
+    if ( !Out || Cap == 0 )
+        return;
+    snprintf( Out, Cap, "%.2f, %.2f, %.2f", Pos.x, Pos.y, Pos.z );
+}
+
+inline void FormatHexAddr( uintptr_t Addr, char* Out, size_t Cap ) {
+    if ( !Out || Cap == 0 )
+        return;
+    snprintf( Out, Cap, "0x%llx", ( unsigned long long )Addr );
+}
+
+[[nodiscard]] inline constexpr float ComputeNudgeValue( float Have, float Delta ) noexcept {
+    float Next = Have + Delta;
+    return Next < 0.0f ? 0.0f : Next;
+}
+
+[[nodiscard]] inline uintptr_t NudgeFieldOffset( int Which, const world::Off& O ) noexcept {
+    switch ( Which ) {
+    case 1: return O.humanoidHealth;
+    case 2: return O.humanoidWalk;
+    case 3: return O.humanoidJump;
+    case 4: return O.humanoidHip;
+    default: return 0;
+    }
+}
+
 inline int Find( uintptr_t Addr ) {
     Session& S = Core( );
     if ( !Addr )
@@ -231,6 +270,7 @@ inline void PathOf( uintptr_t Addr, char* Out, int Cap ) {
         return;
     Out[ 0 ] = 0;
     uintptr_t Stack[ 24 ];
+    const char* Names[ 24 ];
     int Depth = 0;
     uintptr_t At = Addr;
     Session& S = Core( );
@@ -243,15 +283,14 @@ inline void PathOf( uintptr_t Addr, char* Out, int Cap ) {
             break;
         At = Up;
     }
-    for ( int Index = Depth - 1; Index >= 0; Index-- ) {
+    for ( int Index = Depth - 1, Slot = 0; Index >= 0; Index--, Slot++ ) {
         Node* Item = Get( Stack[ Index ] );
         const char* Name = Item ? Item->name : "Inst";
         if ( Stack[ Index ] == S.root )
             Name = "game";
-        if ( Out[ 0 ] )
-            strncat_s( Out, ( size_t )Cap, ".", _TRUNCATE );
-        strncat_s( Out, ( size_t )Cap, Name, _TRUNCATE );
+        Names[ Slot ] = Name;
     }
+    FormatBreadcrumbPath( Names, Depth, Out, ( size_t )Cap );
 }
 
 inline void Note( const char* Text ) {
@@ -335,16 +374,7 @@ inline bool Nudge( uintptr_t Addr, int Which, float Delta ) {
     Node* Item = Get( Addr );
     if ( !Item || !IsKind( Item->klass, "Humanoid" ) )
         return false;
-    world::Off& O = world::Core( ).off;
-    uintptr_t Field = 0;
-    if ( Which == 1 )
-        Field = O.humanoidHealth;
-    else if ( Which == 2 )
-        Field = O.humanoidWalk;
-    else if ( Which == 3 )
-        Field = O.humanoidJump;
-    else if ( Which == 4 )
-        Field = O.humanoidHip;
+    uintptr_t Field = NudgeFieldOffset( Which, world::Core( ).off );
     if ( !Field ) {
         Note( "Offset missing" );
         return false;
@@ -354,9 +384,7 @@ inline bool Nudge( uintptr_t Addr, int Which, float Delta ) {
         Note( "Read failed" );
         return false;
     }
-    Have += Delta;
-    if ( Have < 0.0f )
-        Have = 0.0f;
+    Have = ComputeNudgeValue( Have, Delta );
     if ( !world::EnsureWrite( ) || !world::Poke( Addr + Field, Have ) ) {
         Note( "Write failed" );
         return false;
@@ -382,7 +410,7 @@ inline void RefreshProps( uintptr_t Addr ) {
     Push( "Name", Item->name, 0 );
     Push( "Class", Item->klass, 0 );
     char Hex[ 32 ];
-    snprintf( Hex, sizeof( Hex ), "0x%llx", ( unsigned long long )Item->parent );
+    FormatHexAddr( Item->parent, Hex, sizeof( Hex ) );
     Push( "Parent", Hex, 0 );
 
     world::Off& O = world::Core( ).off;
@@ -392,17 +420,17 @@ inline void RefreshProps( uintptr_t Addr ) {
         world::Vec3 Vel{ };
         if ( world::PartPos( Addr, Pos ) ) {
             char Line[ 72 ];
-            snprintf( Line, sizeof( Line ), "%.2f, %.2f, %.2f", Pos.x, Pos.y, Pos.z );
+            FormatVec3( Pos, Line, sizeof( Line ) );
             Push( "Position", Line, 0 );
         }
         if ( world::PartSize( Addr, Size ) ) {
             char Line[ 72 ];
-            snprintf( Line, sizeof( Line ), "%.2f, %.2f, %.2f", Size.x, Size.y, Size.z );
+            FormatVec3( Size, Line, sizeof( Line ) );
             Push( "Size", Line, 0 );
         }
         if ( world::PartVel( Addr, Vel ) ) {
             char Line[ 72 ];
-            snprintf( Line, sizeof( Line ), "%.2f, %.2f, %.2f", Vel.x, Vel.y, Vel.z );
+            FormatVec3( Vel, Line, sizeof( Line ) );
             Push( "Velocity", Line, 0 );
         }
     }

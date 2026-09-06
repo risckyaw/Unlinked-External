@@ -203,10 +203,41 @@ inline TreeIcon IconFor( const char* Klass ) {
     return TreeIcon::Folder;
 }
 
-inline bool TreeHasKids( int Index ) {
+[[nodiscard]] inline int TreeChildCount( int Index ) noexcept {
+    int Count = 0;
     for ( int Node = 0; Node < TreeNodeCount; Node++ ) {
         if ( TreeNodes[ Node ].parent == Index )
-            return true;
+            Count++;
     }
-    return false;
+    return Count;
 }
+
+[[nodiscard]] inline bool TreeHasKids( int Index ) noexcept {
+    return TreeChildCount( Index ) > 0;
+}
+
+[[nodiscard]] inline int TreeDepth( int Index ) noexcept {
+    if ( Index < 0 || Index >= TreeNodeCount )
+        return -1;
+    int Depth = 0;
+    int Current = Index;
+    while ( Current >= 0 && Current < TreeNodeCount && Depth < 32 ) {
+        int Parent = TreeNodes[ Current ].parent;
+        if ( Parent < 0 )
+            break;
+        Depth++;
+        Current = Parent;
+    }
+    return Depth;
+}
+
+[[nodiscard]] inline int FindTreeNode( const char* Name ) noexcept {
+    if ( !Name || !Name[ 0 ] )
+        return -1;
+    for ( int Index = 0; Index < TreeNodeCount; Index++ ) {
+        if ( !_stricmp( TreeNodes[ Index ].name, Name ) )
+            return Index;
+    }
+    return -1;
+}
+
