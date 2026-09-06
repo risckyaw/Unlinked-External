@@ -513,5 +513,27 @@ inline void ComputeTwoColumnPartition( float ContainerLeft, float ContainerWidth
     OutRight = OutLeft + OutColWidth + Gap;
 }
 
+inline bool IsClientDimValid( int ClientW, int ClientH, int MinDimension = 64 ) {
+    return ClientW > MinDimension && ClientH > MinDimension;
+}
+
+inline void ComputeScreenMid( int ClientX, int ClientY, int ClientW, int ClientH, float& OutX, float& OutY ) {
+    OutX = ( float )( ClientX + ClientW / 2 );
+    OutY = ( float )( ClientY + ClientH / 2 );
+}
+
+inline RectBounds ComputeDropItemBounds( float ListLeft, float ListTop, float ListWidth, float ItemHeight, int Index, float Scale ) {
+    return RectBounds{
+        ListLeft + 3.0f * Scale,
+        ListTop + 3.0f * Scale + ItemHeight * ( float )Index,
+        ListWidth - 6.0f * Scale,
+        ItemHeight
+    };
+}
+
+inline bool ShouldDismissDropdown( bool Click, bool Fresh, bool OverList, bool OverField ) {
+    return Click && !Fresh && !OverList && !OverField;
+}
+
 }
 

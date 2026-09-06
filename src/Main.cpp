@@ -312,8 +312,10 @@ static bool CursorVisible( ) {
 
 static CVector ScreenMid( ) {
     const world::Snap& Live = world::View( );
-    if ( Live.clientW > 64 && Live.clientH > 64 ) {
-        POINT Mid{ Live.clientX + Live.clientW / 2, Live.clientY + Live.clientH / 2 };
+    if ( ui::IsClientDimValid( Live.clientW, Live.clientH ) ) {
+        float MidX = 0.0f, MidY = 0.0f;
+        ui::ComputeScreenMid( Live.clientX, Live.clientY, Live.clientW, Live.clientH, MidX, MidY );
+        POINT Mid{ ( LONG )MidX, ( LONG )MidY };
         HWND Overlay = ( HWND )ur::app::window( );
         if ( Overlay )
             ScreenToClient( Overlay, &Mid );
@@ -836,7 +838,8 @@ static bool DrawDropList( const CVector& Point, bool Click, float Scale ) {
     Canvas->Rectangle( List, Dress.card, 6.0f * Scale );
     Canvas->Border( List, Dress.foldLine, 6.0f * Scale, 1.0f );
     for ( int Index = 0; Index < DropCount; Index++ ) {
-        CRectangle Row( List.Left + 3.0f * Scale, List.Top + 3.0f * Scale + Item * ( float )Index, List.Width - 6.0f * Scale, Item );
+        ui::RectBounds RowB = ui::ComputeDropItemBounds( List.Left, List.Top, List.Width, Item, Index, Scale );
+        CRectangle Row( RowB.left, RowB.top, RowB.width, RowB.height );
         bool Hit = Row.Contains( Point );
         bool On = DropMany ? ( ( *DropBits & ( 1 << Index ) ) != 0 ) : ( *DropPick == Index );
         if ( On || Hit )
@@ -851,7 +854,7 @@ static bool DrawDropList( const CVector& Point, bool Click, float Scale ) {
             }
         }
     }
-    if ( Click && !DropFresh && !Over && !DropField.Contains( Point ) )
+    if ( ui::ShouldDismissDropdown( Click, DropFresh, Over, DropField.Contains( Point ) ) )
         DropId = nullptr;
     DropFresh = false;
     return Over;

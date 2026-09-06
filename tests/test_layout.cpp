@@ -818,6 +818,64 @@ TEST_CASE( "Layout: ComputeTwoColumnPartition symmetric column geometry" ) {
     CHECK_CLOSE( Right + ColW + 14.0f, 100.0f + 400.0f, 0.001f );
 }
 
+TEST_CASE( "Layout: ComputeDropItemBounds row bounds and padding" ) {
+    // List at (100, 200), width 150, ItemHeight 26, Scale 1.0f
+    // Row 0: Left = 100 + 3 = 103, Top = 200 + 3 + 0 = 203, Width = 150 - 6 = 144, Height = 26
+    ui::RectBounds R0 = ui::ComputeDropItemBounds( 100.0f, 200.0f, 150.0f, 26.0f, 0, 1.0f );
+    CHECK_CLOSE( R0.left, 103.0f, 0.001f );
+    CHECK_CLOSE( R0.top, 203.0f, 0.001f );
+    CHECK_CLOSE( R0.width, 144.0f, 0.001f );
+    CHECK_CLOSE( R0.height, 26.0f, 0.001f );
+
+    // Row 1: Top = 200 + 3 + 26 = 229
+    ui::RectBounds R1 = ui::ComputeDropItemBounds( 100.0f, 200.0f, 150.0f, 26.0f, 1, 1.0f );
+    CHECK_CLOSE( R1.left, 103.0f, 0.001f );
+    CHECK_CLOSE( R1.top, 229.0f, 0.001f );
+    CHECK_CLOSE( R1.width, 144.0f, 0.001f );
+    CHECK_CLOSE( R1.height, 26.0f, 0.001f );
+
+    // Scale 1.5f: Pad = 3 * 1.5 = 4.5, Cut = 6 * 1.5 = 9.0
+    ui::RectBounds R2 = ui::ComputeDropItemBounds( 100.0f, 200.0f, 150.0f, 30.0f, 2, 1.5f );
+    CHECK_CLOSE( R2.left, 104.5f, 0.001f );
+    CHECK_CLOSE( R2.top, 200.0f + 4.5f + 60.0f, 0.001f );
+    CHECK_CLOSE( R2.width, 141.0f, 0.001f );
+    CHECK_CLOSE( R2.height, 30.0f, 0.001f );
+}
+
+TEST_CASE( "Layout: ShouldDismissDropdown outside click conditions" ) {
+    // Only dismisses when Click is true, NOT Fresh, NOT OverList, and NOT OverField
+    CHECK( ui::ShouldDismissDropdown( true, false, false, false ) );
+
+    // If no click occurred -> do not dismiss
+    CHECK( !ui::ShouldDismissDropdown( false, false, false, false ) );
+
+    // If dropdown just freshly opened this frame -> do not dismiss
+    CHECK( !ui::ShouldDismissDropdown( true, true, false, false ) );
+
+    // If click is on the list popup -> do not dismiss
+    CHECK( !ui::ShouldDismissDropdown( true, false, true, false ) );
+
+    // If click is on the toggle field -> do not dismiss (toggle field handles it)
+    CHECK( !ui::ShouldDismissDropdown( true, false, false, true ) );
+}
+
+TEST_CASE( "Layout: IsClientDimValid and ComputeScreenMid window math" ) {
+    // Dimensions validation (> 64px)
+    CHECK( ui::IsClientDimValid( 1920, 1080 ) );
+    CHECK( ui::IsClientDimValid( 65, 65 ) );
+    CHECK( !ui::IsClientDimValid( 64, 1080 ) );
+    CHECK( !ui::IsClientDimValid( 1920, 64 ) );
+    CHECK( !ui::IsClientDimValid( 0, 0 ) );
+    CHECK( !ui::IsClientDimValid( -10, -10 ) );
+
+    // Screen midpoint
+    float MidX = 0.0f, MidY = 0.0f;
+    ui::ComputeScreenMid( 100, 200, 1920, 1080, MidX, MidY );
+    CHECK_CLOSE( MidX, 100.0f + 960.0f, 0.001f );
+    CHECK_CLOSE( MidY, 200.0f + 540.0f, 0.001f );
+}
+
+
 
 
 
