@@ -155,23 +155,16 @@ struct Vision {
     float range = 500.0f;
 };
 
-enum EspFeat {
-    FeatBox = 0,
-    FeatName,
-    FeatHealth,
-    FeatDist,
-    FeatSkel,
-    FeatSnap,
-    FeatCount
-};
+using EspFeat = esp::EspFeat;
+inline constexpr auto FeatBox = esp::FeatBox;
+inline constexpr auto FeatName = esp::FeatName;
+inline constexpr auto FeatHealth = esp::FeatHealth;
+inline constexpr auto FeatDist = esp::FeatDist;
+inline constexpr auto FeatSkel = esp::FeatSkel;
+inline constexpr auto FeatSnap = esp::FeatSnap;
+inline constexpr auto FeatCount = esp::FeatCount;
 
-struct Coat {
-    int feat = 0;
-    int vis[ FeatCount ] = { 3, 9, 0, 9, 3, 3 };
-    int hid[ FeatCount ] = { 12, 12, 11, 12, 12, 12 };
-    int globVis = 3;
-    int globHid = 12;
-};
+using Coat = esp::Coat;
 
 struct Vault {
     char names[ store::SlotMax ][ store::NameCap ] = { };
@@ -230,9 +223,7 @@ static const CColor EspTints[ ] = {
 };
 
 static CColor FeatColor( int Feat, bool Seen ) {
-    int Pick = Seen ? Dye.vis[ Feat ] : Dye.hid[ Feat ];
-    if ( Pick < 0 || Pick >= 13 )
-        Pick = 3;
+    int Pick = esp::PickFeatTint( Dye, Feat, Seen, 3 );
     return EspTints[ Pick ];
 }
 
@@ -1967,8 +1958,11 @@ static void DrawEspWorld( float Scale ) {
 
         CRectangle Box( BBox.minX, BBox.minY, BBox.Width( ), BBox.Height( ) );
 
-        if ( Esp.snap )
-            Canvas->Line( Foot, CVector( Box.Left + Box.Width * 0.5f, Box.Bottom( ) ), FeatColor( FeatSnap, Item.vis ).Fade( 0.55f ), Thick );
+        if ( Esp.snap ) {
+            float SnapX = 0.0f, SnapY = 0.0f;
+            esp::ComputeSnaplineTarget( Box.Left, Box.Bottom( ), Box.Width, SnapX, SnapY );
+            Canvas->Line( Foot, CVector( SnapX, SnapY ), FeatColor( FeatSnap, Item.vis ).Fade( 0.55f ), Thick );
+        }
 
         if ( Esp.skeleton ) {
             CColor Joint = FeatColor( FeatSkel, Item.vis );
@@ -1988,24 +1982,27 @@ static void DrawEspWorld( float Scale ) {
 
         if ( Esp.health ) {
             float Ratio = esp::ComputeHealthRatio( Item.health, Item.maxHealth );
-            float BarW = 3.0f * Scale;
-            CRectangle Rail( Box.Left - 6.0f * Scale, Box.Top, BarW, Box.Height );
-            Canvas->Rectangle( Rail, CColor( 10, 12, 16, 190 ), 0.0f );
-            CRectangle Fill( Rail.Left, Rail.Bottom( ) - Rail.Height * Ratio, Rail.Width, Rail.Height * Ratio );
-            Canvas->Rectangle( Fill, FeatColor( FeatHealth, Item.vis ), 0.0f );
+            float RailLeft = 0.0f, RailTop = 0.0f, RailW = 0.0f, RailH = 0.0f;
+            float FillTop = 0.0f, FillH = 0.0f;
+            esp::ComputeHealthBar( Box.Left, Box.Top, Box.Height, Scale, Ratio,
+                                  RailLeft, RailTop, RailW, RailH, FillTop, FillH );
+            Canvas->Rectangle( CRectangle( RailLeft, RailTop, RailW, RailH ), CColor( 10, 12, 16, 190 ), 0.0f );
+            Canvas->Rectangle( CRectangle( RailLeft, FillTop, RailW, FillH ), FeatColor( FeatHealth, Item.vis ), 0.0f );
         }
 
         if ( Font && Esp.name ) {
             CVector Size = Font->Measure( Item.name );
-            CVector At( Box.Left + ( Box.Width - Size.Horizontal ) * 0.5f, Box.Top - Size.Vertical - 3.0f * Scale );
-            Canvas->Outlined( At, FeatColor( FeatName, Item.vis ), Edge, 1.0f, Item.name );
+            float AtX = 0.0f, AtY = 0.0f;
+            esp::ComputeTopCenteredText( Box.Left, Box.Top, Box.Width, Size.Horizontal, Size.Vertical, Scale, AtX, AtY );
+            Canvas->Outlined( CVector( AtX, AtY ), FeatColor( FeatName, Item.vis ), Edge, 1.0f, Item.name );
         }
         if ( Font && Esp.dist ) {
             char Line[ 24 ];
             esp::FormatDistance( Item.dist, Line, sizeof( Line ) );
             CVector Size = Font->Measure( Line );
-            CVector At( Box.Left + ( Box.Width - Size.Horizontal ) * 0.5f, Box.Bottom( ) + 3.0f * Scale );
-            Canvas->Outlined( At, FeatColor( FeatDist, Item.vis ), Edge, 1.0f, Line );
+            float AtX = 0.0f, AtY = 0.0f;
+            esp::ComputeBottomCenteredText( Box.Left, Box.Bottom( ), Box.Width, Size.Horizontal, Scale, AtX, AtY );
+            Canvas->Outlined( CVector( AtX, AtY ), FeatColor( FeatDist, Item.vis ), Edge, 1.0f, Line );
         }
     }
     Canvas->Opacity = Keep;
@@ -2024,24 +2021,11 @@ static void DrawExploreMark( float Scale ) {
         Size.y = 2.0f;
         Size.z = 1.0f;
     }
-    world::Vec3 Hi = Pos;
-    world::Vec3 Lo = Pos;
-    Hi.y += Size.y * 0.5f + 0.15f;
-    Lo.y -= Size.y * 0.5f;
-    Hi.x += Size.x * 0.5f;
-    Lo.x -= Size.x * 0.5f;
-    CVector A;
-    CVector B;
-    CVector C;
-    CVector D;
+    world::Vec3 Hi{ }, Lo{ }, Right{ }, Left{ };
+    esp::ComputePartExtents( Pos, Size, Hi, Lo, Right, Left );
+    CVector A, B, C, D;
     if ( !EspDot( Hi, A ) || !EspDot( Lo, B ) )
         return;
-    world::Vec3 Right = Pos;
-    Right.x += Size.x * 0.5f;
-    Right.z += Size.z * 0.5f;
-    world::Vec3 Left = Pos;
-    Left.x -= Size.x * 0.5f;
-    Left.z -= Size.z * 0.5f;
     EspDot( Right, C );
     EspDot( Left, D );
     esp::BBox2D BBox;

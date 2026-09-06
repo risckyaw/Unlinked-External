@@ -98,3 +98,121 @@ TEST_CASE( "ESP: FormatDistance buffer formatting and safeguards" ) {
     CHECK( !esp::FormatDistance( 10.0f, nullptr, 32 ) );
     CHECK( !esp::FormatDistance( 10.0f, Buffer, 0 ) );
 }
+
+TEST_CASE( "ESP: Palette tints and index clamping (ClampTintIndex, GetEspTint)" ) {
+    CHECK_EQ( esp::EspTintCount, 13 );
+
+    // Normal indices
+    CHECK_EQ( esp::ClampTintIndex( 0 ), 0 );
+    CHECK_EQ( esp::ClampTintIndex( 12 ), 12 );
+
+    // Out of bounds indices fallback to 3
+    CHECK_EQ( esp::ClampTintIndex( -1 ), 3 );
+    CHECK_EQ( esp::ClampTintIndex( 13 ), 3 );
+    CHECK_EQ( esp::ClampTintIndex( 99, 5 ), 5 );
+
+    // RGB values of key palette entries
+    esp::RgbColor Green = esp::GetEspTint( 0 );
+    CHECK_EQ( ( int )Green.r, 72 );
+    CHECK_EQ( ( int )Green.g, 220 );
+    CHECK_EQ( ( int )Green.b, 118 );
+
+    esp::RgbColor Blue = esp::GetEspTint( 3 );
+    CHECK_EQ( ( int )Blue.r, 64 );
+    CHECK_EQ( ( int )Blue.g, 132 );
+    CHECK_EQ( ( int )Blue.b, 255 );
+
+    esp::RgbColor Dark = esp::GetEspTint( 12 );
+    CHECK_EQ( ( int )Dark.r, 18 );
+    CHECK_EQ( ( int )Dark.g, 18 );
+    CHECK_EQ( ( int )Dark.b, 22 );
+}
+
+TEST_CASE( "ESP: Feature tint resolution with Coat defaults (PickFeatTint)" ) {
+    esp::Coat Dye;
+    // Default visible: FeatBox -> 3, FeatName -> 9, FeatHealth -> 0
+    CHECK_EQ( esp::PickFeatTint( Dye, esp::FeatBox, true ), 3 );
+    CHECK_EQ( esp::PickFeatTint( Dye, esp::FeatName, true ), 9 );
+    CHECK_EQ( esp::PickFeatTint( Dye, esp::FeatHealth, true ), 0 );
+
+    // Default hidden: FeatBox -> 12, FeatHealth -> 11
+    CHECK_EQ( esp::PickFeatTint( Dye, esp::FeatBox, false ), 12 );
+    CHECK_EQ( esp::PickFeatTint( Dye, esp::FeatHealth, false ), 11 );
+
+    // Out-of-bounds feat returns fallback
+    CHECK_EQ( esp::PickFeatTint( Dye, -1, true, 4 ), 4 );
+    CHECK_EQ( esp::PickFeatTint( Dye, esp::FeatCount, true, 7 ), 7 );
+}
+
+TEST_CASE( "ESP: ComputeHealthBar rail and fill layout" ) {
+    float RailLeft = 0.0f, RailTop = 0.0f, RailW = 0.0f, RailH = 0.0f;
+    float FillTop = 0.0f, FillH = 0.0f;
+
+    // Full health (Ratio = 1.0f)
+    esp::ComputeHealthBar( 100.0f, 50.0f, 200.0f, 1.0f, 1.0f,
+                          RailLeft, RailTop, RailW, RailH, FillTop, FillH, 3.0f, 6.0f );
+    CHECK_CLOSE( RailLeft, 94.0f, 0.001f ); // 100 - 6
+    CHECK_CLOSE( RailTop, 50.0f, 0.001f );
+    CHECK_CLOSE( RailW, 3.0f, 0.001f );
+    CHECK_CLOSE( RailH, 200.0f, 0.001f );
+    CHECK_CLOSE( FillTop, 50.0f, 0.001f );
+    CHECK_CLOSE( FillH, 200.0f, 0.001f );
+
+    // Half health (Ratio = 0.5f) -> fill starts at 50 + 200 - 100 = 150
+    esp::ComputeHealthBar( 100.0f, 50.0f, 200.0f, 1.0f, 0.5f,
+                          RailLeft, RailTop, RailW, RailH, FillTop, FillH, 3.0f, 6.0f );
+    CHECK_CLOSE( FillTop, 150.0f, 0.001f );
+    CHECK_CLOSE( FillH, 100.0f, 0.001f );
+
+    // Zero health (Ratio = 0.0f) -> fill starts at bottom with 0 height
+    esp::ComputeHealthBar( 100.0f, 50.0f, 200.0f, 1.0f, 0.0f,
+                          RailLeft, RailTop, RailW, RailH, FillTop, FillH, 3.0f, 6.0f );
+    CHECK_CLOSE( FillTop, 250.0f, 0.001f );
+    CHECK_CLOSE( FillH, 0.0f, 0.001f );
+}
+
+TEST_CASE( "ESP: Text label centering (Top and Bottom)" ) {
+    float X = 0.0f, Y = 0.0f;
+
+    // Top text (Name): BoxLeft 100, BoxTop 50, BoxWidth 60, TextW 40, TextH 14, Scale 1, Gap 3
+    esp::ComputeTopCenteredText( 100.0f, 50.0f, 60.0f, 40.0f, 14.0f, 1.0f, X, Y, 3.0f );
+    CHECK_CLOSE( X, 110.0f, 0.001f ); // 100 + (60 - 40) / 2
+    CHECK_CLOSE( Y, 33.0f, 0.001f );  // 50 - 14 - 3
+
+    // Bottom text (Dist): BoxLeft 100, BoxBottom 250, BoxWidth 60, TextW 30, Scale 1, Gap 3
+    esp::ComputeBottomCenteredText( 100.0f, 250.0f, 60.0f, 30.0f, 1.0f, X, Y, 3.0f );
+    CHECK_CLOSE( X, 115.0f, 0.001f ); // 100 + (60 - 30) / 2
+    CHECK_CLOSE( Y, 253.0f, 0.001f ); // 250 + 3
+}
+
+TEST_CASE( "ESP: Snapline target calculation" ) {
+    float TargetX = 0.0f, TargetY = 0.0f;
+    esp::ComputeSnaplineTarget( 100.0f, 300.0f, 80.0f, TargetX, TargetY );
+    CHECK_CLOSE( TargetX, 140.0f, 0.001f ); // 100 + 40
+    CHECK_CLOSE( TargetY, 300.0f, 0.001f );
+}
+
+TEST_CASE( "ESP: ComputePartExtents 3D bounding point expansion" ) {
+    struct SimpleVec { float x; float y; float z; };
+    SimpleVec Pos{ 10.0f, 20.0f, 30.0f };
+    SimpleVec Size{ 2.0f, 4.0f, 2.0f };
+    SimpleVec Hi{ }, Lo{ }, Right{ }, Left{ };
+
+    esp::ComputePartExtents( Pos, Size, Hi, Lo, Right, Left );
+
+    // Hi: y = 20 + 2 + 0.15 = 22.15, x = 10 + 1 = 11
+    CHECK_CLOSE( Hi.y, 22.15f, 0.001f );
+    CHECK_CLOSE( Hi.x, 11.0f, 0.001f );
+
+    // Lo: y = 20 - 2 = 18, x = 10 - 1 = 9
+    CHECK_CLOSE( Lo.y, 18.0f, 0.001f );
+    CHECK_CLOSE( Lo.x, 9.0f, 0.001f );
+
+    // Right: x = 11, z = 31
+    CHECK_CLOSE( Right.x, 11.0f, 0.001f );
+    CHECK_CLOSE( Right.z, 31.0f, 0.001f );
+
+    // Left: x = 9, z = 29
+    CHECK_CLOSE( Left.x, 9.0f, 0.001f );
+    CHECK_CLOSE( Left.z, 29.0f, 0.001f );
+}
