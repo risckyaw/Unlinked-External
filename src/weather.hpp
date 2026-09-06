@@ -5,7 +5,9 @@
  * @brief Unlinked External - Menu background shader effects, particle snow simulation, and visual styling.
  */
 
+#if __has_include("Shaders.h")
 #include "Shaders.h"
+#endif
 
 #include <cmath>
 #include <cstdint>
@@ -110,6 +112,7 @@ inline unsigned ThunderFx( ) {
     State& S = Live( );
     if ( S.thunder )
         return S.thunder;
+#if __has_include("Shaders.h")
     S.thunder = Shaders->Compose( "weather.pack.lightning2",
         "Float2 Uv = Local / max( Extent, Float2( 0.001, 0.001 ) );\n"
         "float N = 0.0;\n"
@@ -157,6 +160,7 @@ inline unsigned ThunderFx( ) {
         "float Glow = Saturate( max( Col.x, max( Col.y, Col.z ) ) );\n"
         "Final = Float4( Saturate( Col ), Glow );\n"
     );
+#endif
     return S.thunder;
 }
 
