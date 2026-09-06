@@ -108,5 +108,9 @@ inline void UpdateDragState( bool Press, bool CanStart, float PointX, float Poin
     }
 }
 
+inline void ComputeBadgeSize( float TextW, float TextH, float Scale, float& OutW, float& OutH, float PadX = 12.0f, float PadY = 7.0f ) {
+    OutW = TextW + PadX * 2.0f * Scale;
+    OutH = TextH + PadY * 2.0f * Scale;
 }
 
+}

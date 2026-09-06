@@ -180,3 +180,19 @@ TEST_CASE( "Layout: UpdateDragState lifecycle transitions" ) {
     CHECK_CLOSE( OriginX, 200.0f, 0.001f );
 }
 
+TEST_CASE( "Layout: ComputeBadgeSize padding and scale" ) {
+    float Wide = 0.0f;
+    float Tall = 0.0f;
+
+    // Scale 1.0f with default PadX 12, PadY 7
+    ui::ComputeBadgeSize( 100.0f, 20.0f, 1.0f, Wide, Tall );
+    CHECK_CLOSE( Wide, 124.0f, 0.001f );
+    CHECK_CLOSE( Tall, 34.0f, 0.001f );
+
+    // Scale 1.5f: PadX becomes 18, PadY becomes 10.5 -> 2*PadX=36, 2*PadY=21
+    ui::ComputeBadgeSize( 100.0f, 20.0f, 1.5f, Wide, Tall );
+    CHECK_CLOSE( Wide, 136.0f, 0.001f );
+    CHECK_CLOSE( Tall, 41.0f, 0.001f );
+}
+
+

@@ -494,11 +494,7 @@ static void Pace( ) {
     if ( !Menu.limit )
         return;
 
-    float Cap = Menu.fps;
-    if ( Cap < 60.0f )
-        Cap = 60.0f;
-    if ( Cap > 1000.0f )
-        Cap = 1000.0f;
+    float Cap = play::ClampFpsLimit( Menu.fps );
 
     LARGE_INTEGER Now = { };
     QueryPerformanceCounter( &Now );
@@ -1551,44 +1547,20 @@ static bool DrawExplorer( float Across, float Vertical, const CVector& Point, bo
 }
 
 static float LiveFps( ) {
-    float Instant = Context->DeltaTime > 0.00005f ? 1.0f / Context->DeltaTime : Context->Framerate;
-    if ( Instant < 1.0f )
-        Instant = Context->Framerate;
-    static float Smooth = 0.0f;
-    static float Shown = 0.0f;
-    static float Wait = 0.0f;
-    if ( Smooth < 1.0f )
-        Smooth = Instant;
-    else {
-        float Rate = Context->DeltaTime * 1.4f;
-        if ( Rate > 0.08f )
-            Rate = 0.08f;
-        Smooth += ( Instant - Smooth ) * Rate;
-    }
-    Wait += Context->DeltaTime;
-    if ( Wait >= 0.4f || Shown < 1.0f ) {
-        Shown = Smooth;
-        Wait = 0.0f;
-    }
-    return Shown;
+    static play::FpsFilter Filter;
+    return Filter.Update( Context->DeltaTime, Context->Framerate );
 }
 
 static void MarkLine( char* Line, size_t Cap ) {
     float Fps = LiveFps( );
-    if ( Menu.watermark && Menu.showFps )
-        snprintf( Line, Cap, "Unlinked   %.0f fps", ( double )Fps );
-    else if ( Menu.watermark )
-        snprintf( Line, Cap, "Unlinked" );
-    else
-        snprintf( Line, Cap, "%.0f fps", ( double )Fps );
+    play::FormatWatermark( Menu.watermark, Menu.showFps, Fps, Line, Cap );
 }
 
 static CRectangle PlaceMark( float Across, float Vertical, float Scale, CFont* Face, const char* Line ) {
     CVector Size = Face->Measure( Line );
-    float PadX = 12.0f * Scale;
-    float PadY = 7.0f * Scale;
-    float Wide = Size.Horizontal + PadX * 2.0f;
-    float Tall = Size.Vertical + PadY * 2.0f;
+    float Wide = 0.0f;
+    float Tall = 0.0f;
+    ui::ComputeBadgeSize( Size.Horizontal, Size.Vertical, Scale, Wide, Tall );
     if ( !Badge.ready ) {
         Badge.origin = CVector( 14.0f * Scale, Vertical - Tall - 14.0f * Scale );
         Badge.ready = true;
