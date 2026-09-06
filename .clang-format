@@ -1,0 +1,29 @@
+---
+BasedOnStyle: LLVM
+Language: Cpp
+Standard: c++20
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+ColumnLimit: 120
+
+# Braces
+BreakBeforeBraces: Attach
+
+# Spaces inside parentheses & brackets
+SpacesInParentheses: true
+SpacesInSquareBrackets: true
+SpacesInAngles: false
+
+# Pointers and References
+PointerAlignment: Right
+ReferenceAlignment: Right
+
+# Namespaces & Classes
+AccessModifierOffset: -4
+NamespaceIndentation: None
+
+# Includes
+SortIncludes: CaseSensitive
+IncludeBlocks: Preserve
+...
