@@ -27,6 +27,7 @@
 #include "weather.hpp"
 #include "gameplay.hpp"
 #include "aim.hpp"
+#include "esp.hpp"
 #include "ur/ur.hpp"
 #include "explorer.hpp"
 #include "browse.hpp"
@@ -1974,15 +1975,6 @@ static void DrawEspWorld( float Scale ) {
     float Thick = 1.5f * Scale;
     CVector Foot( ( float )ur::app::width( ) * 0.5f, ( float )ur::app::height( ) - 4.0f * Scale );
 
-    static const int Links[ ][ 2 ] = {
-        { 0, 2 }, { 2, 3 },
-        { 2, 4 }, { 4, 5 }, { 5, 6 },
-        { 2, 7 }, { 7, 8 }, { 8, 9 },
-        { 3, 10 }, { 10, 11 }, { 11, 12 },
-        { 3, 13 }, { 13, 14 }, { 14, 15 },
-        { 0, 2 }, { 2, 4 }, { 2, 7 }, { 2, 10 }, { 2, 13 }
-    };
-
     for ( int Index = 0; Index < Snap.count; Index++ ) {
         const world::Actor& Item = Snap.list[ Index ];
         if ( Item.dist > Esp.range )
@@ -1991,24 +1983,12 @@ static void DrawEspWorld( float Scale ) {
             continue;
         CVector Dots[ world::BoneMax ];
         bool On[ world::BoneMax ] = { };
-        float MinX = 1.0e9f;
-        float MaxX = -1.0e9f;
-        float MinY = 1.0e9f;
-        float MaxY = -1.0e9f;
-        int Hits = 0;
+        esp::BBox2D BBox;
         auto Push = [ & ]( const world::Vec3& World ) {
             CVector At;
             if ( !EspDot( World, At ) )
                 return;
-            if ( At.Horizontal < MinX )
-                MinX = At.Horizontal;
-            if ( At.Horizontal > MaxX )
-                MaxX = At.Horizontal;
-            if ( At.Vertical < MinY )
-                MinY = At.Vertical;
-            if ( At.Vertical > MaxY )
-                MaxY = At.Vertical;
-            Hits++;
+            BBox.Push( At.Horizontal, At.Vertical );
         };
         auto PushOff = [ & ]( world::Vec3 Point, float Side, float Lift ) {
             Point.x += Snap.right.x * Side;
@@ -2033,25 +2013,21 @@ static void DrawEspWorld( float Scale ) {
             On[ Slot ] = true;
             Push( Item.world[ Slot ] );
         }
-        if ( Hits < 2 )
+        if ( !BBox.IsValid( 2.0f, 2 ) )
             continue;
 
-        float Tall = MaxY - MinY;
-        float Wide = MaxX - MinX;
-        if ( Tall < 2.0f || Wide < 2.0f )
-            continue;
-        CRectangle Box( MinX, MinY, Wide, Tall );
+        CRectangle Box( BBox.minX, BBox.minY, BBox.Width( ), BBox.Height( ) );
 
         if ( Esp.snap )
             Canvas->Line( Foot, CVector( Box.Left + Box.Width * 0.5f, Box.Bottom( ) ), FeatColor( FeatSnap, Item.vis ).Fade( 0.55f ), Thick );
 
         if ( Esp.skeleton ) {
             CColor Joint = FeatColor( FeatSkel, Item.vis );
-            int Start = Item.r15 ? 0 : 14;
-            int Count = Item.r15 ? 14 : 5;
-            for ( int Link = 0; Link < Count; Link++ ) {
-                int A = Links[ Start + Link ][ 0 ];
-                int B = Links[ Start + Link ][ 1 ];
+            int LinkCount = 0;
+            const esp::BoneLink* Skeleton = esp::GetSkeletonLinks( Item.r15, LinkCount );
+            for ( int Link = 0; Link < LinkCount; Link++ ) {
+                int A = Skeleton[ Link ].from;
+                int B = Skeleton[ Link ].to;
                 if ( !On[ A ] || !On[ B ] )
                     continue;
                 Canvas->Line( Dots[ A ], Dots[ B ], Joint, Thick );
@@ -2062,11 +2038,7 @@ static void DrawEspWorld( float Scale ) {
             Canvas->Border( Box, FeatColor( FeatBox, Item.vis ), 0.0f, Thick );
 
         if ( Esp.health ) {
-            float Ratio = Item.health / Item.maxHealth;
-            if ( Ratio < 0.0f )
-                Ratio = 0.0f;
-            if ( Ratio > 1.0f )
-                Ratio = 1.0f;
+            float Ratio = esp::ComputeHealthRatio( Item.health, Item.maxHealth );
             float BarW = 3.0f * Scale;
             CRectangle Rail( Box.Left - 6.0f * Scale, Box.Top, BarW, Box.Height );
             Canvas->Rectangle( Rail, CColor( 10, 12, 16, 190 ), 0.0f );
@@ -2081,7 +2053,7 @@ static void DrawEspWorld( float Scale ) {
         }
         if ( Font && Esp.dist ) {
             char Line[ 24 ];
-            snprintf( Line, sizeof( Line ), "%.0fm", ( double )Item.dist );
+            esp::FormatDistance( Item.dist, Line, sizeof( Line ) );
             CVector Size = Font->Measure( Line );
             CVector At( Box.Left + ( Box.Width - Size.Horizontal ) * 0.5f, Box.Bottom( ) + 3.0f * Scale );
             Canvas->Outlined( At, FeatColor( FeatDist, Item.vis ), Edge, 1.0f, Line );
@@ -2123,29 +2095,16 @@ static void DrawExploreMark( float Scale ) {
     Left.z -= Size.z * 0.5f;
     EspDot( Right, C );
     EspDot( Left, D );
-    float MinX = A.Horizontal < B.Horizontal ? A.Horizontal : B.Horizontal;
-    float MaxX = A.Horizontal > B.Horizontal ? A.Horizontal : B.Horizontal;
-    float MinY = A.Vertical < B.Vertical ? A.Vertical : B.Vertical;
-    float MaxY = A.Vertical > B.Vertical ? A.Vertical : B.Vertical;
-    auto Push = [ & ]( const CVector& At ) {
-        if ( At.Horizontal < MinX )
-            MinX = At.Horizontal;
-        if ( At.Horizontal > MaxX )
-            MaxX = At.Horizontal;
-        if ( At.Vertical < MinY )
-            MinY = At.Vertical;
-        if ( At.Vertical > MaxY )
-            MaxY = At.Vertical;
-    };
-    Push( C );
-    Push( D );
-    float Wide = MaxX - MinX;
-    float Tall = MaxY - MinY;
-    if ( Wide < 2.0f || Tall < 2.0f )
+    esp::BBox2D BBox;
+    BBox.Push( A.Horizontal, A.Vertical );
+    BBox.Push( B.Horizontal, B.Vertical );
+    BBox.Push( C.Horizontal, C.Vertical );
+    BBox.Push( D.Horizontal, D.Vertical );
+    if ( !BBox.IsValid( 2.0f, 2 ) )
         return;
     float Keep = Canvas->Opacity;
     Canvas->Opacity = 1.0f;
-    Canvas->Border( CRectangle( MinX, MinY, Wide, Tall ), CColor( 255, 80, 200, 230 ), 0.0f, 2.0f * Scale );
+    Canvas->Border( CRectangle( BBox.minX, BBox.minY, BBox.Width( ), BBox.Height( ) ), CColor( 255, 80, 200, 230 ), 0.0f, 2.0f * Scale );
     Canvas->Opacity = Keep;
 }
 
