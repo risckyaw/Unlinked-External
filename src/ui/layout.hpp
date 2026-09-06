@@ -270,4 +270,66 @@ inline float ComputePageSlide( float PageIn, float Scale, float PageDir, float D
     return ( 1.0f - Ease ) * Distance * Scale * PageDir;
 }
 
+inline RectBounds ComputeCenteredIcon( const RectBounds& Container, float IconSize ) {
+    return { Container.left + ( Container.width - IconSize ) * 0.5f,
+             Container.top + ( Container.height - IconSize ) * 0.5f,
+             IconSize, IconSize };
+}
+
+inline void ComputeTitleLayout( float HeaderLeft, float HeaderTop, float HeaderWidth, float HeaderHeight,
+                                float TextWidth, float TextHeight, bool HasLogo, float Scale,
+                                RectBounds& OutLogo, float& OutTextX, float& OutTextY ) {
+    float LogoSize = 25.0f * Scale;
+    float Gap = 8.0f * Scale;
+    float Total = TextWidth + ( HasLogo ? LogoSize + Gap : 0.0f );
+    float Left = HeaderLeft + ( HeaderWidth - Total ) * 0.5f;
+    float Top = HeaderTop + ( HeaderHeight - TextHeight ) * 0.5f;
+    OutLogo = { Left, HeaderTop + ( HeaderHeight - LogoSize ) * 0.5f, LogoSize, LogoSize };
+    OutTextX = Left + ( HasLogo ? LogoSize + Gap : 0.0f );
+    OutTextY = Top;
+}
+
+inline float UpdateTabSlide( float CurrentAt, int TargetTab, float DeltaTime, float Speed = 20.0f ) {
+    float Want = ( float )TargetTab;
+    float Step = Speed * DeltaTime;
+    if ( Step > 1.0f )
+        Step = 1.0f;
+    return CurrentAt + ( Want - CurrentAt ) * Step;
+}
+
+inline float ComputeTabActiveWeight( float TabAt, int Index ) {
+    float Dist = fabsf( TabAt - ( float )Index );
+    return Dist < 1.0f ? 1.0f - Dist : 0.0f;
+}
+
+struct TabSwipeGeometry {
+    RectBounds stack;
+    RectBounds fill;
+    bool capTop = false;
+    bool capBot = false;
+    float round = 0.0f;
+};
+
+inline TabSwipeGeometry ComputeTabSwipeGeometry( float RailLeft, float RailTop, float RailWidth,
+                                                float TabHeight, float TabGap, float Scale,
+                                                int TabCount, float TabAt ) {
+    float Stride = TabHeight * Scale + TabGap * Scale;
+    float Tall = TabHeight * Scale;
+    float Round = 12.0f * Scale;
+    RectBounds Stack{ RailLeft, RailTop, RailWidth, Stride * ( float )TabCount };
+    RectBounds Fill{ RailLeft, RailTop + Stride * TabAt, RailWidth, Tall };
+    bool Top = Fill.top <= Stack.top + 0.75f;
+    bool Bot = ( Fill.top + Fill.height ) >= ( Stack.top + Stack.height ) - 0.75f;
+    return TabSwipeGeometry{ Stack, Fill, Top, Bot, ( Top || Bot ) ? Round : 0.0f };
+}
+
+inline void ComputeTabItemGeometry( float TabLeft, float TabTop, float TabWidth,
+                                   float TextWidth, float Scale,
+                                   RectBounds& OutGlyph, float& OutLabelX, float& OutLabelY ) {
+    float Mark = 24.0f * Scale;
+    OutGlyph = { TabLeft + ( TabWidth - Mark ) * 0.5f, TabTop + 13.0f * Scale, Mark, Mark };
+    OutLabelX = TabLeft + ( TabWidth - TextWidth ) * 0.5f;
+    OutLabelY = ( OutGlyph.top + OutGlyph.height ) + 7.0f * Scale;
+}
+
 }

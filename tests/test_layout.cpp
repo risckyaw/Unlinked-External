@@ -443,3 +443,113 @@ TEST_CASE( "Layout: EaseOutQuint and ComputePageSlide" ) {
     float SlideRev = ui::ComputePageSlide( 0.0f, 1.0f, -1.0f, 36.0f );
     CHECK_CLOSE( SlideRev, -36.0f, 0.001f );
 }
+
+TEST_CASE( "Layout: ComputeCenteredIcon generic box centering" ) {
+    ui::RectBounds Container{ 100.0f, 200.0f, 40.0f, 30.0f };
+    ui::RectBounds Icon = ui::ComputeCenteredIcon( Container, 14.0f );
+
+    // Center X: 100 + (40 - 14) * 0.5 = 100 + 13 = 113
+    CHECK_CLOSE( Icon.left, 113.0f, 0.001f );
+    // Center Y: 200 + (30 - 14) * 0.5 = 200 + 8 = 208
+    CHECK_CLOSE( Icon.top, 208.0f, 0.001f );
+    CHECK_CLOSE( Icon.width, 14.0f, 0.001f );
+    CHECK_CLOSE( Icon.height, 14.0f, 0.001f );
+}
+
+TEST_CASE( "Layout: ComputeTitleLayout with and without logo" ) {
+    ui::RectBounds LogoB;
+    float TextX = 0.0f, TextY = 0.0f;
+
+    // With Logo: TextW = 80, TextH = 20, Header = (0, 0, 300, 50), Scale = 1.0f
+    // LogoSize = 25, Gap = 8 -> Total = 80 + 25 + 8 = 113
+    // Left = 0 + (300 - 113) * 0.5 = 93.5
+    // Top = 0 + (50 - 20) * 0.5 = 15.0
+    ui::ComputeTitleLayout( 0.0f, 0.0f, 300.0f, 50.0f, 80.0f, 20.0f, true, 1.0f, LogoB, TextX, TextY );
+    CHECK_CLOSE( LogoB.left, 93.5f, 0.001f );
+    CHECK_CLOSE( LogoB.top, 12.5f, 0.001f ); // (50 - 25) * 0.5 = 12.5
+    CHECK_CLOSE( LogoB.width, 25.0f, 0.001f );
+    CHECK_CLOSE( TextX, 93.5f + 25.0f + 8.0f, 0.001f ); // 126.5
+    CHECK_CLOSE( TextY, 15.0f, 0.001f );
+
+    // Without Logo: Total = 80
+    // Left = (300 - 80) * 0.5 = 110.0
+    ui::ComputeTitleLayout( 0.0f, 0.0f, 300.0f, 50.0f, 80.0f, 20.0f, false, 1.0f, LogoB, TextX, TextY );
+    CHECK_CLOSE( TextX, 110.0f, 0.001f );
+    CHECK_CLOSE( TextY, 15.0f, 0.001f );
+}
+
+TEST_CASE( "Layout: UpdateTabSlide interpolation and clamping" ) {
+    // Normal step: Current = 0.0f, Target = 2, Dt = 0.016f, Speed = 20 -> Step = 0.32
+    // NewAt = 0.0f + (2 - 0) * 0.32 = 0.64
+    float StepNorm = ui::UpdateTabSlide( 0.0f, 2, 0.016f, 20.0f );
+    CHECK_CLOSE( StepNorm, 0.64f, 0.001f );
+
+    // Huge Dt: Step clamped to 1.0f -> reaches target immediately without overshoot
+    float StepHuge = ui::UpdateTabSlide( 0.0f, 3, 2.0f, 20.0f );
+    CHECK_CLOSE( StepHuge, 3.0f, 0.001f );
+
+    // Already at target -> remains unchanged
+    float StepSame = ui::UpdateTabSlide( 4.0f, 4, 0.016f, 20.0f );
+    CHECK_CLOSE( StepSame, 4.0f, 0.001f );
+}
+
+TEST_CASE( "Layout: ComputeTabActiveWeight distance falloff" ) {
+    // Exact match
+    CHECK_CLOSE( ui::ComputeTabActiveWeight( 2.0f, 2 ), 1.0f, 0.001f );
+
+    // Distance 0.3 -> weight 0.7
+    CHECK_CLOSE( ui::ComputeTabActiveWeight( 2.3f, 2 ), 0.7f, 0.001f );
+
+    // Neighbor at index 3 -> distance 0.7 -> weight 0.3
+    CHECK_CLOSE( ui::ComputeTabActiveWeight( 2.3f, 3 ), 0.3f, 0.001f );
+
+    // Dist >= 1.0 -> weight 0.0
+    CHECK_CLOSE( ui::ComputeTabActiveWeight( 2.3f, 0 ), 0.0f, 0.001f );
+    CHECK_CLOSE( ui::ComputeTabActiveWeight( 2.3f, 4 ), 0.0f, 0.001f );
+}
+
+TEST_CASE( "Layout: ComputeTabSwipeGeometry rail and boundary caps" ) {
+    // Rail: Left=10, Top=20, Width=80, TabHeight=70, TabGap=0, Scale=1.0, 5 tabs
+    // Top tab (TabAt = 0.0f)
+    ui::TabSwipeGeometry TopGeo = ui::ComputeTabSwipeGeometry( 10.0f, 20.0f, 80.0f, 70.0f, 0.0f, 1.0f, 5, 0.0f );
+    CHECK_CLOSE( TopGeo.stack.height, 350.0f, 0.001f );
+    CHECK_CLOSE( TopGeo.fill.top, 20.0f, 0.001f );
+    CHECK_CLOSE( TopGeo.fill.height, 70.0f, 0.001f );
+    CHECK( TopGeo.capTop );
+    CHECK( !TopGeo.capBot );
+    CHECK_CLOSE( TopGeo.round, 12.0f, 0.001f );
+
+    // Middle tab (TabAt = 2.0f)
+    ui::TabSwipeGeometry MidGeo = ui::ComputeTabSwipeGeometry( 10.0f, 20.0f, 80.0f, 70.0f, 0.0f, 1.0f, 5, 2.0f );
+    CHECK_CLOSE( MidGeo.fill.top, 160.0f, 0.001f );
+    CHECK( !MidGeo.capTop );
+    CHECK( !MidGeo.capBot );
+    CHECK_CLOSE( MidGeo.round, 0.0f, 0.001f );
+
+    // Bottom tab (TabAt = 4.0f)
+    ui::TabSwipeGeometry BotGeo = ui::ComputeTabSwipeGeometry( 10.0f, 20.0f, 80.0f, 70.0f, 0.0f, 1.0f, 5, 4.0f );
+    CHECK_CLOSE( BotGeo.fill.top, 300.0f, 0.001f );
+    CHECK( !BotGeo.capTop );
+    CHECK( BotGeo.capBot );
+    CHECK_CLOSE( BotGeo.round, 12.0f, 0.001f );
+}
+
+TEST_CASE( "Layout: ComputeTabItemGeometry glyph and label placement" ) {
+    ui::RectBounds Glyph;
+    float LabelX = 0.0f, LabelY = 0.0f;
+
+    // Tab: Left = 10, Top = 50, Width = 80, TextWidth = 40, Scale = 1.0f
+    // Mark = 24.0
+    // Glyph.left = 10 + (80 - 24) * 0.5 = 10 + 28 = 38
+    // Glyph.top = 50 + 13 = 63
+    // LabelX = 10 + (80 - 40) * 0.5 = 30
+    // LabelY = (63 + 24) + 7 = 94
+    ui::ComputeTabItemGeometry( 10.0f, 50.0f, 80.0f, 40.0f, 1.0f, Glyph, LabelX, LabelY );
+    CHECK_CLOSE( Glyph.left, 38.0f, 0.001f );
+    CHECK_CLOSE( Glyph.top, 63.0f, 0.001f );
+    CHECK_CLOSE( Glyph.width, 24.0f, 0.001f );
+    CHECK_CLOSE( Glyph.height, 24.0f, 0.001f );
+    CHECK_CLOSE( LabelX, 30.0f, 0.001f );
+    CHECK_CLOSE( LabelY, 94.0f, 0.001f );
+}
+

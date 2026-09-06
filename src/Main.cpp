@@ -518,16 +518,15 @@ static void DrawIce( const CRectangle& Clip, const CRectangle& Fill, float Round
 static void DrawTitle( const CRectangle& Header, float Scale, const char* Title ) {
     EnsureTitle( Scale );
     CVector Size = TitleFace.Measure( Title );
-    float LogoSize = 25.0f * Scale;
-    float Gap = 8.0f * Scale;
     unsigned long long Logo = LogoPath.empty( ) ? 0 : ur::image::file( LogoPath.c_str( ), 64 );
-    float Total = Size.Horizontal + ( Logo ? LogoSize + Gap : 0.0f );
-    float Left = Header.Left + ( Header.Width - Total ) * 0.5f;
-    float Top = Header.Top + ( Header.Height - TitleFace.LineSpan ) * 0.5f;
+    ui::RectBounds LogoB;
+    float TextX = 0.0f, TextY = 0.0f;
+    ui::ComputeTitleLayout( Header.Left, Header.Top, Header.Width, Header.Height,
+                            Size.Horizontal, TitleFace.LineSpan, Logo != 0, Scale,
+                            LogoB, TextX, TextY );
     if ( Logo )
-        Canvas->Image( CRectangle( Left, Header.Top + ( Header.Height - LogoSize ) * 0.5f, LogoSize, LogoSize ), Logo, CRectangle( 0.0f, 0.0f, 1.0f, 1.0f ), CColor( 255, 255, 255 ), LogoSize * 0.18f );
-    Left += Logo ? LogoSize + Gap : 0.0f;
-    Canvas->Write( &TitleFace, CVector( Left, Top ), Dress.inkHot.Fade( 0.93f ), Title );
+        Canvas->Image( CRectangle( LogoB.left, LogoB.top, LogoB.width, LogoB.height ), Logo, CRectangle( 0.0f, 0.0f, 1.0f, 1.0f ), CColor( 255, 255, 255 ), LogoB.width * 0.18f );
+    Canvas->Write( &TitleFace, CVector( TextX, TextY ), Dress.inkHot.Fade( 0.93f ), Title );
 }
 
 static CRectangle TabBounds( const CRectangle& Rail, float Scale, int Index ) {
@@ -562,22 +561,12 @@ static void DrawTabPlate( const CRectangle& Tab, int Index, float Round, CColor 
 }
 
 static void DrawTabSwipe( const CRectangle& Rail, float Scale ) {
-    float Want = ( float )Menu.tab;
-    float Step = 20.0f * Context->DeltaTime;
-    if ( Step > 1.0f )
-        Step = 1.0f;
-    Menu.tabAt += ( Want - Menu.tabAt ) * Step;
-
-    float Stride = TabHeight * Scale + TabGap * Scale;
-    float Tall = TabHeight * Scale;
-    float Round = 12.0f * Scale;
-    CRectangle Stack( Rail.Left, Rail.Top, Rail.Width, Stride * ( float )TabCount );
-    CRectangle Fill( Rail.Left, Rail.Top + Stride * Menu.tabAt, Rail.Width, Tall );
-    bool Top = Fill.Top <= Stack.Top + 0.75f;
-    bool Bot = Fill.Bottom( ) >= Stack.Bottom( ) - 0.75f;
-    float Use = ( Top || Bot ) ? Round : 0.0f;
+    Menu.tabAt = ui::UpdateTabSlide( Menu.tabAt, Menu.tab, ( float )Context->DeltaTime );
+    ui::TabSwipeGeometry Geo = ui::ComputeTabSwipeGeometry( Rail.Left, Rail.Top, Rail.Width, TabHeight, TabGap, Scale, TabCount, Menu.tabAt );
+    CRectangle Stack( Geo.stack.left, Geo.stack.top, Geo.stack.width, Geo.stack.height );
+    CRectangle Fill( Geo.fill.left, Geo.fill.top, Geo.fill.width, Geo.fill.height );
     Canvas->PushClip( Stack );
-    DrawIce( Fill, TabPlate( Fill, Top, Bot, Round ), Use, 1.0f );
+    DrawIce( Fill, TabPlate( Fill, Geo.capTop, Geo.capBot, Geo.round ), Geo.round, 1.0f );
     Canvas->PopClip( );
 }
 
@@ -586,25 +575,23 @@ static void DrawTab( const CRectangle& Tab, const TabSpec& Spec, int Index, floa
     snprintf( HoverId, sizeof( HoverId ), "%s.hover", Spec.id );
 
     bool Selected = Menu.tab == Index;
-    float Dist = Menu.tabAt - ( float )Index;
-    if ( Dist < 0.0f )
-        Dist = -Dist;
-    float Active = Dist < 1.0f ? 1.0f - Dist : 0.0f;
+    float Active = ui::ComputeTabActiveWeight( Menu.tabAt, Index );
     float Hover = ur::motion::toward( HoverId, ( Hovered && !Selected ) ? 1.0f : 0.0f, 26.0f );
     float Round = 12.0f * Scale;
-    float Mark = 24.0f * Scale;
 
     DrawTabPlate( Tab, Index, Round, CColor( 255, 255, 255, 18 ), 0, Hover * ( 1.0f - Active ) );
 
+    CVector Size = Font->Measure( Spec.name );
+    ui::RectBounds GlyphB;
+    float LabelX = 0.0f, LabelY = 0.0f;
+    ui::ComputeTabItemGeometry( Tab.Left, Tab.Top, Tab.Width, Size.Horizontal, Scale, GlyphB, LabelX, LabelY );
+
     unsigned long long Icon = ur::glyphs::image( Spec.icon, ( int )( 26.0f * Scale + 0.5f ), ur::glyphs::Weight::Solid );
-    CRectangle Glyph( Tab.Left + ( Tab.Width - Mark ) * 0.5f, Tab.Top + 13.0f * Scale, Mark, Mark );
     CColor Ink = Mix( Mix( Style->Faint, Dress.ink, Hover ), Dress.inkHot, Active );
     if ( Icon )
-        Canvas->Image( Glyph, Icon, CRectangle( 0.0f, 0.0f, 1.0f, 1.0f ), Ink, 0.0f );
+        Canvas->Image( CRectangle( GlyphB.left, GlyphB.top, GlyphB.width, GlyphB.height ), Icon, CRectangle( 0.0f, 0.0f, 1.0f, 1.0f ), Ink, 0.0f );
 
-    CVector Size = Font->Measure( Spec.name );
-    float LabelTop = Glyph.Bottom( ) + 7.0f * Scale;
-    Canvas->Text( CVector( Tab.Left + ( Tab.Width - Size.Horizontal ) * 0.5f, LabelTop ), Ink, Spec.name );
+    Canvas->Text( CVector( LabelX, LabelY ), Ink, Spec.name );
 }
 
 static CRectangle CloseBounds( const CRectangle& Header, float Scale ) {
@@ -624,8 +611,9 @@ static bool DrawClose( const CRectangle& Header, const CVector& Point, bool Clic
     unsigned long long Icon = ur::glyphs::image( ur::icons::Icon::Xmark, ( int )( 14.0f * Scale + 0.5f ), ur::glyphs::Weight::Solid );
     CColor Ink = Mix( CColor( 220, 226, 236 ), CColor( 255, 246, 246 ), Hover );
     float Mark = 14.0f * Scale;
+    ui::RectBounds MarkB = ui::ComputeCenteredIcon( { Close.Left, Close.Top, Close.Width, Close.Height }, Mark );
     if ( Icon )
-        Canvas->Image( CRectangle( Close.Left + ( Close.Width - Mark ) * 0.5f, Close.Top + ( Close.Height - Mark ) * 0.5f, Mark, Mark ), Icon, CRectangle( 0.0f, 0.0f, 1.0f, 1.0f ), Ink, 0.0f );
+        Canvas->Image( CRectangle( MarkB.left, MarkB.top, MarkB.width, MarkB.height ), Icon, CRectangle( 0.0f, 0.0f, 1.0f, 1.0f ), Ink, 0.0f );
 
     if ( Over && Click && Exit )
         ur::app::quit( );
