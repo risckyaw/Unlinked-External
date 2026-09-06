@@ -543,4 +543,82 @@ inline bool IsVersionMatch( const char* ClientVer, const char* DumpVer ) {
     return _stricmp( ClientVer, DumpVer ) == 0;
 }
 
+inline bool IsChannelMismatch( bool HaveClient, const char* ClientVer, const char* DumpVer ) {
+    if ( !HaveClient || !DumpVer || !DumpVer[ 0 ] )
+        return false;
+    return !IsVersionMatch( ClientVer, DumpVer );
 }
+
+struct ChannelState {
+    bool open = false;
+    bool dismissed = false;
+    bool mismatch = false;
+    unsigned nextScan = 0;
+    char client[ 48 ] = { };
+    char dump[ 48 ] = { };
+
+    void Reset( ) {
+        open = false;
+        dismissed = false;
+        mismatch = false;
+        nextScan = 0;
+        client[ 0 ] = 0;
+        dump[ 0 ] = 0;
+    }
+
+    void Dismiss( ) {
+        open = false;
+        dismissed = true;
+    }
+
+    bool Update( unsigned Now, unsigned IntervalMs, bool HaveClient, const char* InClient, bool DumpReady, const char* InDump ) {
+        if ( Now < nextScan )
+            return false;
+        nextScan = Now + IntervalMs;
+
+        if ( HaveClient && InClient )
+            lstrcpynA( client, InClient, ( int )sizeof( client ) );
+        else
+            client[ 0 ] = 0;
+
+        if ( DumpReady && InDump )
+            lstrcpynA( dump, InDump, ( int )sizeof( dump ) );
+        else
+            dump[ 0 ] = 0;
+
+        mismatch = IsChannelMismatch( HaveClient, client, dump );
+        if ( !mismatch ) {
+            open = false;
+            dismissed = false;
+            return true;
+        }
+        if ( !dismissed )
+            open = true;
+        return true;
+    }
+};
+
+inline const char* const* GetChannelNoticeSteps( size_t& OutCount ) {
+    static const char* Steps[ ] = {
+        "1. Download Fishstrap from fishstrap.app",
+        "2. Install it, then open Fishstrap from search",
+        "3. Click Configure Settings",
+        "4. Open the Deployment tab",
+        "5. Set Channel to production and press Enter",
+        "6. Set Automatic channel change to Never change",
+        "7. Press Save and Launch"
+    };
+    OutCount = sizeof( Steps ) / sizeof( Steps[ 0 ] );
+    return Steps;
+}
+
+inline bool FormatChannelNoticeLine( char* Out, size_t Cap, const char* Prefix, const char* Version ) {
+    if ( !Out || Cap == 0 )
+        return false;
+    const char* SafeVer = ( Version && Version[ 0 ] ) ? Version : "unknown";
+    snprintf( Out, Cap, "%-12s %s", Prefix ? Prefix : "", SafeVer );
+    return true;
+}
+
+}
+

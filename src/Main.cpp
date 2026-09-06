@@ -229,16 +229,7 @@ static CColor FeatColor( int Feat, bool Seen ) {
 
 static Vault Packs;
 
-struct Channel {
-    bool open = false;
-    bool dismissed = false;
-    bool mismatch = false;
-    unsigned nextScan = 0;
-    char client[ 48 ] = { };
-    char dump[ 48 ] = { };
-};
-
-static Channel LiveCh;
+static offsets::ChannelState LiveCh;
 static bool ChanMouse = false;
 
 static bool KeyWas[ 256 ] = { };
@@ -957,35 +948,21 @@ static bool ReadClientVer( char* Out, int Cap ) {
 
 static void TickChannel( ) {
     unsigned Now = GetTickCount( );
-    if ( Now < LiveCh.nextScan )
-        return;
-    LiveCh.nextScan = Now + 2000;
-
     char Client[ 48 ] = { };
     bool HaveClient = ReadClientVer( Client, ( int )sizeof( Client ) );
     char Dump[ 48 ] = { };
     if ( offsets::Ready( ) )
         offsets::CopyVersion( Dump, ( int )sizeof( Dump ) );
 
-    if ( HaveClient )
-        lstrcpynA( LiveCh.client, Client, ( int )sizeof( LiveCh.client ) );
-    else
-        LiveCh.client[ 0 ] = 0;
-    lstrcpynA( LiveCh.dump, Dump, ( int )sizeof( LiveCh.dump ) );
-
-    LiveCh.mismatch = HaveClient && Dump[ 0 ] && !offsets::IsVersionMatch( Client, Dump );
-    if ( !LiveCh.mismatch ) {
-        LiveCh.open = false;
-        LiveCh.dismissed = false;
-        return;
-    }
-    if ( !LiveCh.dismissed )
-        LiveCh.open = true;
+    LiveCh.Update( Now, 2000, HaveClient, Client, offsets::Ready( ), Dump );
 }
 
 static void DrawChannelNotice( float Across, float Vertical, const CVector& Point, bool Click, float Scale ) {
     if ( !LiveCh.open || !Font )
         return;
+
+    size_t StepCount = 0;
+    const char* const* Steps = offsets::GetChannelNoticeSteps( StepCount );
 
     float Line = Font->LineSpan;
     float Pad = 18.0f * Scale;
@@ -994,7 +971,7 @@ static void DrawChannelNotice( float Across, float Vertical, const CVector& Poin
     float AfterSteps = 18.0f * Scale;
     float StepGap = 6.0f * Scale;
     float Wide = 448.0f * Scale;
-    float Tall = ui::ComputeModalTall( HeadH, Line, StepGap, 7, AfterSteps, ActH, Pad, Scale );
+    float Tall = ui::ComputeModalTall( HeadH, Line, StepGap, ( int )StepCount, AfterSteps, ActH, Pad, Scale );
     CRectangle Shade( 0.0f, 0.0f, Across, Vertical );
     ui::RectBounds CardB = ui::ComputeCenteredBounds( Across, Vertical, Wide, Tall );
     CRectangle Card( CardB.left, CardB.top, CardB.width, CardB.height );
@@ -1014,26 +991,17 @@ static void DrawChannelNotice( float Across, float Vertical, const CVector& Poin
 
     float Y = Head.Bottom( ) + 14.0f * Scale;
     char LineText[ 96 ] = { };
-    snprintf( LineText, sizeof( LineText ), "Your client  %s", LiveCh.client[ 0 ] ? LiveCh.client : "unknown" );
+    offsets::FormatChannelNoticeLine( LineText, sizeof( LineText ), "Your client", LiveCh.client );
     Canvas->Text( CVector( Card.Left + Pad, Y ), Style->Text, LineText );
     Y += Line + 6.0f * Scale;
-    snprintf( LineText, sizeof( LineText ), "LIVE dump    %s", LiveCh.dump[ 0 ] ? LiveCh.dump : "unknown" );
+    offsets::FormatChannelNoticeLine( LineText, sizeof( LineText ), "LIVE dump", LiveCh.dump );
     Canvas->Text( CVector( Card.Left + Pad, Y ), Style->Faint, LineText );
     Y += Line + 12.0f * Scale;
     Canvas->Text( CVector( Card.Left + Pad, Y ), Style->Faint, "Offsets are dumped for the LIVE channel only." );
     Y += Line + 10.0f * Scale;
 
-    static const char* Steps[ ] = {
-        "1. Download Fishstrap from fishstrap.app",
-        "2. Install it, then open Fishstrap from search",
-        "3. Click Configure Settings",
-        "4. Open the Deployment tab",
-        "5. Set Channel to production and press Enter",
-        "6. Set Automatic channel change to Never change",
-        "7. Press Save and Launch"
-    };
-    for ( const char* Step : Steps ) {
-        Canvas->Text( CVector( Card.Left + Pad, Y ), Style->Text, Step );
+    for ( size_t Index = 0; Index < StepCount; Index++ ) {
+        Canvas->Text( CVector( Card.Left + Pad, Y ), Style->Text, Steps[ Index ] );
         Y += Line + StepGap;
     }
 
@@ -1045,10 +1013,8 @@ static void DrawChannelNotice( float Across, float Vertical, const CVector& Poin
     CRectangle Ok( OkB.left, OkB.top, OkB.width, OkB.height );
     if ( DrawAction( Get, "Get Fishstrap", Point, Click, Scale, false ) )
         ShellExecuteA( nullptr, "open", "https://www.fishstrap.app/Fishstrap.exe", nullptr, nullptr, SW_SHOWNORMAL );
-    if ( DrawAction( Ok, "Got it", Point, Click, Scale, false ) ) {
-        LiveCh.open = false;
-        LiveCh.dismissed = true;
-    }
+    if ( DrawAction( Ok, "Got it", Point, Click, Scale, false ) )
+        LiveCh.Dismiss( );
 
     ur::overlay::Options& Overlay = ur::app::overlay_options( );
     Overlay.click_through = false;

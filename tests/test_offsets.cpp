@@ -135,3 +135,118 @@ TEST_CASE( "Offsets: StageText descriptions" ) {
     // Reset back to Idle
     offsets::Data( ).stage.store( ( int )offsets::Stage::Idle );
 }
+
+TEST_CASE( "Offsets: IsChannelMismatch predicate logic" ) {
+    // Matching versions -> no mismatch
+    CHECK( !offsets::IsChannelMismatch( true, "version-123456", "version-123456" ) );
+
+    // Case-insensitive match -> no mismatch
+    CHECK( !offsets::IsChannelMismatch( true, "version-AbCdEf", "version-aBcDeF" ) );
+
+    // Different versions -> mismatch
+    CHECK( offsets::IsChannelMismatch( true, "version-111111", "version-222222" ) );
+
+    // Missing client (HaveClient = false) -> no mismatch
+    CHECK( !offsets::IsChannelMismatch( false, "version-111111", "version-222222" ) );
+
+    // Dump not available / empty / null -> no mismatch
+    CHECK( !offsets::IsChannelMismatch( true, "version-111111", nullptr ) );
+    CHECK( !offsets::IsChannelMismatch( true, "version-111111", "" ) );
+
+    // Client empty string while dump exists -> mismatch
+    CHECK( offsets::IsChannelMismatch( true, "", "version-222222" ) );
+    CHECK( offsets::IsChannelMismatch( true, nullptr, "version-222222" ) );
+}
+
+TEST_CASE( "Offsets: ChannelState transition and dismiss lifecycle" ) {
+    offsets::ChannelState State;
+    CHECK_EQ( State.open, false );
+    CHECK_EQ( State.dismissed, false );
+    CHECK_EQ( State.mismatch, false );
+    CHECK_EQ( State.nextScan, 0u );
+    CHECK_EQ( State.client[ 0 ], 0 );
+    CHECK_EQ( State.dump[ 0 ], 0 );
+
+    // First update with mismatched versions
+    bool Scanned = State.Update( 1000, 2000, true, "version-client", true, "version-dump" );
+    CHECK_EQ( Scanned, true );
+    CHECK_EQ( State.nextScan, 3000u );
+    CHECK_EQ( State.mismatch, true );
+    CHECK_EQ( State.open, true );
+    CHECK_EQ( State.dismissed, false );
+    CHECK_EQ( std::string( State.client ), "version-client" );
+    CHECK_EQ( std::string( State.dump ), "version-dump" );
+
+    // Sub-interval update throttled
+    Scanned = State.Update( 1500, 2000, true, "version-client", true, "version-dump" );
+    CHECK_EQ( Scanned, false );
+
+    // Dismiss dialog
+    State.Dismiss( );
+    CHECK_EQ( State.open, false );
+    CHECK_EQ( State.dismissed, true );
+    CHECK_EQ( State.mismatch, true );
+
+    // Subsequent update after interval while dismissed preserves dismissed state
+    Scanned = State.Update( 3500, 2000, true, "version-client", true, "version-dump" );
+    CHECK_EQ( Scanned, true );
+    CHECK_EQ( State.mismatch, true );
+    CHECK_EQ( State.open, false );
+    CHECK_EQ( State.dismissed, true );
+
+    // Client updates to match dump: mismatch clears and dismissed flag resets
+    Scanned = State.Update( 6000, 2000, true, "version-dump", true, "version-dump" );
+    CHECK_EQ( Scanned, true );
+    CHECK_EQ( State.mismatch, false );
+    CHECK_EQ( State.open, false );
+    CHECK_EQ( State.dismissed, false );
+
+    // Client mismatches again: opens dialog again since dismissed was cleared
+    Scanned = State.Update( 8500, 2000, true, "version-new", true, "version-dump" );
+    CHECK_EQ( Scanned, true );
+    CHECK_EQ( State.mismatch, true );
+    CHECK_EQ( State.open, true );
+    CHECK_EQ( State.dismissed, false );
+
+    // Manual Reset
+    State.Reset( );
+    CHECK_EQ( State.open, false );
+    CHECK_EQ( State.dismissed, false );
+    CHECK_EQ( State.mismatch, false );
+    CHECK_EQ( State.nextScan, 0u );
+    CHECK_EQ( State.client[ 0 ], 0 );
+    CHECK_EQ( State.dump[ 0 ], 0 );
+}
+
+TEST_CASE( "Offsets: Channel notice steps and formatting" ) {
+    size_t StepCount = 0;
+    const char* const* Steps = offsets::GetChannelNoticeSteps( StepCount );
+    CHECK( Steps != nullptr );
+    CHECK_EQ( StepCount, ( size_t )7 );
+
+    CHECK( strstr( Steps[ 0 ], "1." ) != nullptr );
+    CHECK( strstr( Steps[ 0 ], "Fishstrap" ) != nullptr );
+    CHECK( strstr( Steps[ 4 ], "5." ) != nullptr );
+    CHECK( strstr( Steps[ 4 ], "production" ) != nullptr );
+    CHECK( strstr( Steps[ 6 ], "7." ) != nullptr );
+
+    char Line[ 96 ] = { };
+    CHECK( offsets::FormatChannelNoticeLine( Line, sizeof( Line ), "Your client", "version-abc" ) );
+    CHECK_EQ( std::string( Line ), "Your client  version-abc" );
+
+    CHECK( offsets::FormatChannelNoticeLine( Line, sizeof( Line ), "LIVE dump", "version-xyz" ) );
+    CHECK_EQ( std::string( Line ), "LIVE dump    version-xyz" );
+
+    // Empty version falls back to "unknown"
+    CHECK( offsets::FormatChannelNoticeLine( Line, sizeof( Line ), "Your client", "" ) );
+    CHECK_EQ( std::string( Line ), "Your client  unknown" );
+
+    // Nullptr version falls back to "unknown"
+    CHECK( offsets::FormatChannelNoticeLine( Line, sizeof( Line ), "LIVE dump", nullptr ) );
+    CHECK_EQ( std::string( Line ), "LIVE dump    unknown" );
+
+    // Invalid parameters
+    CHECK( !offsets::FormatChannelNoticeLine( nullptr, sizeof( Line ), "Label", "ver" ) );
+    CHECK( !offsets::FormatChannelNoticeLine( Line, 0, "Label", "ver" ) );
+}
+
