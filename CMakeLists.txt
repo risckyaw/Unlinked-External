@@ -79,6 +79,7 @@ add_executable( UnlinkedTests
     tests/test_math.cpp
     tests/test_store.cpp
     tests/test_offsets.cpp
+    tests/test_handle.cpp
 )
 target_link_libraries( UnlinkedTests PRIVATE winhttp )
 target_include_directories( UnlinkedTests PRIVATE src tests )

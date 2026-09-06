@@ -2068,13 +2068,12 @@ static bool ReadClientVer( char* Out, int Cap ) {
         DWORD Pid = world::FindPid( Name );
         if ( !Pid )
             continue;
-        HANDLE Handle = OpenProcess( PROCESS_QUERY_LIMITED_INFORMATION, FALSE, Pid );
+        unlinked::UniqueHandle Handle( OpenProcess( PROCESS_QUERY_LIMITED_INFORMATION, FALSE, Pid ) );
         if ( !Handle )
             continue;
         char Path[ MAX_PATH ] = { };
         DWORD Size = ( DWORD )sizeof( Path );
-        BOOL Ok = QueryFullProcessImageNameA( Handle, 0, Path, &Size );
-        CloseHandle( Handle );
+        BOOL Ok = QueryFullProcessImageNameA( Handle.get( ), 0, Path, &Size );
         if ( !Ok )
             continue;
         const char* Found = strstr( Path, "version-" );

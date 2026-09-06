@@ -14,6 +14,7 @@
 
 #include "offsets.hpp"
 #include "sense.hpp"
+#include "handle.hpp"
 
 namespace world {
 
@@ -1036,30 +1037,29 @@ inline bool RayHit( const Vec3& Origin, const Vec3& Dir, float MaxT, uintptr_t P
 }
 
 inline DWORD FindPid( const wchar_t* Name ) {
-    HANDLE Snap = CreateToolhelp32Snapshot( TH32CS_SNAPPROCESS, 0 );
-    if ( Snap == INVALID_HANDLE_VALUE )
+    unlinked::UniqueHandle Snap( CreateToolhelp32Snapshot( TH32CS_SNAPPROCESS, 0 ) );
+    if ( !Snap )
         return 0;
     PROCESSENTRY32W Entry = { };
     Entry.dwSize = sizeof( Entry );
     DWORD Pid = 0;
-    if ( Process32FirstW( Snap, &Entry ) ) {
+    if ( Process32FirstW( Snap.get( ), &Entry ) ) {
         do {
             if ( _wcsicmp( Entry.szExeFile, Name ) == 0 )
                 Pid = Entry.th32ProcessID;
-        } while ( Process32NextW( Snap, &Entry ) );
+        } while ( Process32NextW( Snap.get( ), &Entry ) );
     }
-    CloseHandle( Snap );
     return Pid;
 }
 
 inline uintptr_t ModuleBase( DWORD Pid, const wchar_t* Name, uintptr_t* Size = nullptr ) {
-    HANDLE Snap = CreateToolhelp32Snapshot( TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, Pid );
-    if ( Snap == INVALID_HANDLE_VALUE )
+    unlinked::UniqueHandle Snap( CreateToolhelp32Snapshot( TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, Pid ) );
+    if ( !Snap )
         return 0;
     MODULEENTRY32W Entry = { };
     Entry.dwSize = sizeof( Entry );
     uintptr_t Base = 0;
-    if ( Module32FirstW( Snap, &Entry ) ) {
+    if ( Module32FirstW( Snap.get( ), &Entry ) ) {
         do {
             if ( _wcsicmp( Entry.szModule, Name ) == 0 ) {
                 Base = ( uintptr_t )Entry.modBaseAddr;
@@ -1067,9 +1067,8 @@ inline uintptr_t ModuleBase( DWORD Pid, const wchar_t* Name, uintptr_t* Size = n
                     *Size = ( uintptr_t )Entry.modBaseSize;
                 break;
             }
-        } while ( Module32NextW( Snap, &Entry ) );
+        } while ( Module32NextW( Snap.get( ), &Entry ) );
     }
-    CloseHandle( Snap );
     return Base;
 }
 
@@ -1159,13 +1158,13 @@ inline bool Attach( ) {
 
     BindNt( );
     bool CanWrite = true;
-    HANDLE Handle = OpenProcess( PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_VM_OPERATION | PROCESS_QUERY_INFORMATION, FALSE, Pid );
+    unlinked::UniqueHandle Handle( OpenProcess( PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_VM_OPERATION | PROCESS_QUERY_INFORMATION, FALSE, Pid ) );
     if ( !Handle ) {
         CanWrite = false;
-        Handle = OpenProcess( PROCESS_VM_READ | PROCESS_QUERY_INFORMATION, FALSE, Pid );
+        Handle.reset( OpenProcess( PROCESS_VM_READ | PROCESS_QUERY_INFORMATION, FALSE, Pid ) );
     }
     if ( !Handle )
-        Handle = OpenProcess( PROCESS_VM_READ | PROCESS_QUERY_LIMITED_INFORMATION, FALSE, Pid );
+        Handle.reset( OpenProcess( PROCESS_VM_READ | PROCESS_QUERY_LIMITED_INFORMATION, FALSE, Pid ) );
     if ( !Handle ) {
         lstrcpynA( E.front.note, "access denied", ( int )sizeof( E.front.note ) );
         return false;
@@ -1176,11 +1175,10 @@ inline bool Attach( ) {
     if ( !Base )
         Base = ModuleBase( Pid, L"RobloxPlayerBeta.exe", &Size );
     if ( !Base ) {
-        CloseHandle( Handle );
         return false;
     }
 
-    E.process = Handle;
+    E.process = Handle.release( );
     E.writeOk = CanWrite;
     E.pid = Pid;
     E.base = Base;
@@ -1799,11 +1797,11 @@ inline bool EnsureWrite( ) {
         return true;
     if ( !E.process || !E.pid )
         return false;
-    HANDLE Handle = OpenProcess( PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_VM_OPERATION | PROCESS_QUERY_INFORMATION, FALSE, E.pid );
+    unlinked::UniqueHandle Handle( OpenProcess( PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_VM_OPERATION | PROCESS_QUERY_INFORMATION, FALSE, E.pid ) );
     if ( !Handle )
         return false;
     CloseHandle( E.process );
-    E.process = Handle;
+    E.process = Handle.release( );
     E.writeOk = true;
     return true;
 }
