@@ -72,7 +72,7 @@ inline bool IsPart( const char* Klass ) {
 }
 
 inline bool IsValue( const char* Klass ) {
-    if ( !Klass )
+    if ( !Klass || !Klass[ 0 ] )
         return false;
     return strstr( Klass, "Value" ) != nullptr;
 }
@@ -80,11 +80,14 @@ inline bool IsValue( const char* Klass ) {
 inline bool IContains( const char* Hay, const char* Needle ) {
     if ( !Needle || !Needle[ 0 ] )
         return true;
-    if ( !Hay )
+    if ( !Hay || !Hay[ 0 ] )
         return false;
     size_t Need = strlen( Needle );
-    for ( const char* At = Hay; *At; At++ ) {
-        if ( _strnicmp( At, Needle, Need ) == 0 )
+    size_t Have = strlen( Hay );
+    if ( Have < Need )
+        return false;
+    for ( size_t Index = 0; Index <= Have - Need; Index++ ) {
+        if ( _strnicmp( Hay + Index, Needle, Need ) == 0 )
             return true;
     }
     return false;
