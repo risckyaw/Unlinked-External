@@ -115,4 +115,38 @@ inline const char* BitLabel( const char* const* Options, int Count, int Bits ) {
     return Line;
 }
 
+inline bool DetectRisingEdge( bool Current, bool& Prior ) {
+    bool Hit = Current && !Prior;
+    Prior = Current;
+    return Hit;
+}
+
+inline bool DetectFallingEdge( bool Current, bool& Prior ) {
+    bool Hit = !Current && Prior;
+    Prior = Current;
+    return Hit;
+}
+
+template <typename KeyStateFn>
+inline int PollKeyBind( bool AllowMouse1, KeyStateFn&& IsKeyDown, bool* KeyHistory, int MaxCode = 256 ) {
+    int Hit = 0;
+    for ( int Code = 1; Code < MaxCode; Code++ ) {
+        if ( Code == VK_ESCAPE )
+            continue;
+        if ( Code == VK_LBUTTON && !AllowMouse1 )
+            continue;
+        bool Now = IsKeyDown( Code );
+        if ( Now && !KeyHistory[ Code ] )
+            Hit = Code;
+        KeyHistory[ Code ] = Now;
+    }
+    return Hit;
+}
+
+template <typename KeyStateFn>
+inline void SyncKeyHistory( KeyStateFn&& IsKeyDown, bool* KeyHistory, int MaxCode = 256 ) {
+    for ( int Code = 1; Code < MaxCode; Code++ )
+        KeyHistory[ Code ] = IsKeyDown( Code );
+}
+
 }

@@ -110,3 +110,34 @@ TEST_CASE( "Gameplay: FormatWatermark combination modes" ) {
     CHECK_EQ( std::string( Buffer ), "0 fps" );
 }
 
+TEST_CASE( "Gameplay: ComputeFrameGoalTime clamping and inversion" ) {
+    // 60 FPS -> 1.0 / 60.0 ~ 0.016666...
+    CHECK_CLOSE( ( float )play::ComputeFrameGoalTime( 60.0f ), 0.0166667f, 0.0001f );
+
+    // 144 FPS -> 1.0 / 144.0 ~ 0.006944...
+    CHECK_CLOSE( ( float )play::ComputeFrameGoalTime( 144.0f ), 0.0069444f, 0.0001f );
+
+    // Below 60 FPS clamps to 60 FPS
+    CHECK_CLOSE( ( float )play::ComputeFrameGoalTime( 20.0f ), 0.0166667f, 0.0001f );
+
+    // Above 1000 FPS clamps to 1000 FPS -> 0.001
+    CHECK_CLOSE( ( float )play::ComputeFrameGoalTime( 2000.0f ), 0.0010000f, 0.0001f );
+}
+
+TEST_CASE( "Gameplay: ComputeFramePacingAction thresholds" ) {
+    double Goal = 0.0166667; // ~60 FPS
+
+    // Action 0: Target time elapsed or exceeded -> proceed immediately
+    CHECK_EQ( play::ComputeFramePacingAction( Goal, 0.0166667 ), 0 );
+    CHECK_EQ( play::ComputeFramePacingAction( Goal, 0.0200000 ), 0 );
+
+    // Action 1: More than 2ms remaining -> sleep
+    // Spent = 0.010 -> Remaining = ~0.00667 > 0.002 -> Action 1
+    CHECK_EQ( play::ComputeFramePacingAction( Goal, 0.0100000 ), 1 );
+
+    // Action 2: Less than 2ms remaining -> spin / busy wait
+    // Spent = 0.015 -> Remaining = ~0.00167 <= 0.002 -> Action 2
+    CHECK_EQ( play::ComputeFramePacingAction( Goal, 0.0150000 ), 2 );
+}
+
+

@@ -297,10 +297,7 @@ static bool Moving( ) {
 }
 
 static bool Edge( int Key, bool& Prior ) {
-    bool Now = Held( Key );
-    bool Hit = Now && !Prior;
-    Prior = Now;
-    return Hit;
+    return ui::DetectRisingEdge( Held( Key ), Prior );
 }
 
 static CVector Cursor( ) {
@@ -450,23 +447,11 @@ static const char* KeyLabel( int Code ) {
 }
 
 static int PollBind( bool Mouse1 ) {
-    int Hit = 0;
-    for ( int Code = 1; Code < 256; Code++ ) {
-        if ( Code == VK_ESCAPE )
-            continue;
-        if ( Code == VK_LBUTTON && !Mouse1 )
-            continue;
-        bool Now = Held( Code );
-        if ( Now && !KeyWas[ Code ] )
-            Hit = Code;
-        KeyWas[ Code ] = Now;
-    }
-    return Hit;
+    return ui::PollKeyBind( Mouse1, Held, KeyWas );
 }
 
 static void SyncBindKeys( ) {
-    for ( int Code = 1; Code < 256; Code++ )
-        KeyWas[ Code ] = Held( Code );
+    ui::SyncKeyHistory( Held, KeyWas );
 }
 
 static void Pace( ) {
@@ -485,18 +470,18 @@ static void Pace( ) {
     if ( !Menu.limit )
         return;
 
-    float Cap = play::ClampFpsLimit( Menu.fps );
+    double Goal = play::ComputeFrameGoalTime( Menu.fps );
 
     LARGE_INTEGER Now = { };
     QueryPerformanceCounter( &Now );
     if ( Last.QuadPart != 0 ) {
-        double Goal = 1.0 / ( double )Cap;
         for ( ;; ) {
             QueryPerformanceCounter( &Now );
             double Spent = ( double )( Now.QuadPart - Last.QuadPart ) / ( double )Freq.QuadPart;
-            if ( Spent >= Goal )
+            int Action = play::ComputeFramePacingAction( Goal, Spent );
+            if ( Action == 0 )
                 break;
-            if ( Goal - Spent > 0.002 )
+            if ( Action == 1 )
                 Sleep( 1 );
         }
     }

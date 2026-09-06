@@ -89,3 +89,70 @@ TEST_CASE( "BitLabels: Bitmask formatting with options" ) {
     // All bits (1 | 2 | 4 | 8)
     CHECK_EQ( std::string( ui::BitLabel( Bones, 4, 15 ) ), "Head, Neck, Chest, Stomach" );
 }
+
+TEST_CASE( "KeyLabels: DetectRisingEdge and DetectFallingEdge" ) {
+    bool State = false;
+
+    // Rising edge: false -> true
+    CHECK( ui::DetectRisingEdge( true, State ) );
+    CHECK( State ); // State updated to true
+
+    // Sustained high: true -> true
+    CHECK( !ui::DetectRisingEdge( true, State ) );
+
+    // Falling edge: true -> false
+    CHECK( ui::DetectFallingEdge( false, State ) );
+    CHECK( !State ); // State updated to false
+
+    // Sustained low: false -> false
+    CHECK( !ui::DetectFallingEdge( false, State ) );
+}
+
+TEST_CASE( "KeyLabels: PollKeyBind filters Escape and conditional Mouse1" ) {
+    bool KeyHistory[ 256 ] = { };
+
+    // Case 1: Escape key is pressed -> ignored
+    auto EscapePressed = []( int Code ) { return Code == VK_ESCAPE; };
+    int HitEsc = ui::PollKeyBind( true, EscapePressed, KeyHistory );
+    CHECK_EQ( HitEsc, 0 );
+
+    // Case 2: Mouse 1 pressed when AllowMouse1 is false -> ignored
+    std::memset( KeyHistory, 0, sizeof( KeyHistory ) );
+    auto Mouse1Pressed = []( int Code ) { return Code == VK_LBUTTON; };
+    int HitMouse1Disallowed = ui::PollKeyBind( false, Mouse1Pressed, KeyHistory );
+    CHECK_EQ( HitMouse1Disallowed, 0 );
+
+    // Case 3: Mouse 1 pressed when AllowMouse1 is true -> accepted
+    std::memset( KeyHistory, 0, sizeof( KeyHistory ) );
+    int HitMouse1Allowed = ui::PollKeyBind( true, Mouse1Pressed, KeyHistory );
+    CHECK_EQ( HitMouse1Allowed, VK_LBUTTON );
+    CHECK( KeyHistory[ VK_LBUTTON ] ); // History updated
+}
+
+TEST_CASE( "KeyLabels: PollKeyBind edge triggering and history sync" ) {
+    bool KeyHistory[ 256 ] = { };
+    int MockPressed = VK_F3;
+
+    auto PressMock = [&]( int Code ) { return Code == MockPressed; };
+
+    // Initial press triggers binding
+    int Hit1 = ui::PollKeyBind( false, PressMock, KeyHistory );
+    CHECK_EQ( Hit1, VK_F3 );
+    CHECK( KeyHistory[ VK_F3 ] );
+
+    // Second poll with same key still held down returns 0 (not a new edge)
+    int Hit2 = ui::PollKeyBind( false, PressMock, KeyHistory );
+    CHECK_EQ( Hit2, 0 );
+
+    // Releasing key and syncing history
+    MockPressed = 0;
+    ui::SyncKeyHistory( PressMock, KeyHistory );
+    CHECK( !KeyHistory[ VK_F3 ] );
+
+    // Pressing another key (e.g. 'V') triggers
+    MockPressed = 'V';
+    int Hit3 = ui::PollKeyBind( false, PressMock, KeyHistory );
+    CHECK_EQ( Hit3, 'V' );
+    CHECK( KeyHistory[ 'V' ] );
+}
+

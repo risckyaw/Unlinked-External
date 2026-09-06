@@ -67,6 +67,18 @@ inline float ClampFpsLimit( float Fps ) {
     return Fps;
 }
 
+inline double ComputeFrameGoalTime( float FpsLimit ) {
+    return 1.0 / ( double )ClampFpsLimit( FpsLimit );
+}
+
+inline int ComputeFramePacingAction( double GoalTime, double SpentTime ) {
+    if ( SpentTime >= GoalTime )
+        return 0;
+    if ( GoalTime - SpentTime > 0.002 )
+        return 1;
+    return 2;
+}
+
 inline bool FormatWatermark( bool Watermark, bool ShowFps, float Fps, char* Out, size_t Cap ) {
     if ( !Out || Cap == 0 )
         return false;
