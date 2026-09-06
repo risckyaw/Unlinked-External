@@ -1069,14 +1069,8 @@ static bool ReadClientVer( char* Out, int Cap ) {
         BOOL Ok = QueryFullProcessImageNameA( Handle.get( ), 0, Path, &Size );
         if ( !Ok )
             continue;
-        const char* Found = strstr( Path, "version-" );
-        if ( !Found )
-            continue;
-        lstrcpynA( Out, Found, Cap );
-        char* Cut = strpbrk( Out, "\\/" );
-        if ( Cut )
-            *Cut = 0;
-        return Out[ 0 ] != 0;
+        if ( offsets::ExtractVersion( Path, Out, Cap ) )
+            return true;
     }
     return false;
 }
@@ -1099,7 +1093,7 @@ static void TickChannel( ) {
         LiveCh.client[ 0 ] = 0;
     lstrcpynA( LiveCh.dump, Dump, ( int )sizeof( LiveCh.dump ) );
 
-    LiveCh.mismatch = HaveClient && Dump[ 0 ] && _stricmp( Client, Dump ) != 0;
+    LiveCh.mismatch = HaveClient && Dump[ 0 ] && !offsets::IsVersionMatch( Client, Dump );
     if ( !LiveCh.mismatch ) {
         LiveCh.open = false;
         LiveCh.dismissed = false;
