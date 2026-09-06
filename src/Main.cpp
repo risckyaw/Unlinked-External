@@ -31,6 +31,7 @@
 #include "explorer.hpp"
 #include "browse.hpp"
 #include "ui/key_labels.hpp"
+#include "ui/layout.hpp"
 
 namespace {
 
@@ -415,14 +416,7 @@ static void OpenLiveFolds( ) {
 }
 
 static void ClampBox( CVector& Origin, float Across, float Vertical, float Wide, float Tall ) {
-    if ( Origin.Horizontal < 8.0f )
-        Origin.Horizontal = 8.0f;
-    if ( Origin.Vertical < 8.0f )
-        Origin.Vertical = 8.0f;
-    if ( Origin.Horizontal + Wide > Across - 8.0f )
-        Origin.Horizontal = Across - Wide - 8.0f;
-    if ( Origin.Vertical + Tall > Vertical - 8.0f )
-        Origin.Vertical = Vertical - Tall - 8.0f;
+    ui::ClampBox( Origin.Horizontal, Origin.Vertical, Across, Vertical, Wide, Tall );
 }
 
 static void Clamp( float Across, float Vertical, float Wide, float Tall ) {
@@ -940,33 +934,19 @@ static bool DrawDropList( const CVector& Point, bool Click, float Scale ) {
 }
 
 static float SwatchSize( float Scale ) {
-    return 16.0f * Scale;
+    return ui::SwatchSize( Scale );
 }
 
 static float SwatchGap( float Scale ) {
-    return 3.0f * Scale;
+    return ui::SwatchGap( Scale );
 }
 
 static int SwatchColumns( float Wide, int Count, float Scale ) {
-    float Size = SwatchSize( Scale );
-    float Gap = SwatchGap( Scale );
-    int Columns = Count;
-    float Need = Size * ( float )Count + Gap * ( float )( Count - 1 );
-    if ( Need > Wide )
-        Columns = ( int )( ( Wide + Gap ) / ( Size + Gap ) );
-    if ( Columns < 1 )
-        Columns = 1;
-    return Columns;
+    return ui::SwatchColumns( Wide, Count, Scale );
 }
 
 static float SwatchTall( float Wide, int Count, float Scale ) {
-    float Size = SwatchSize( Scale );
-    float Gap = SwatchGap( Scale );
-    int Columns = SwatchColumns( Wide, Count, Scale );
-    int Rows = ( Count + Columns - 1 ) / Columns;
-    if ( Rows < 1 )
-        Rows = 1;
-    return Size * ( float )Rows + Gap * ( float )( Rows - 1 );
+    return ui::SwatchTall( Wide, Count, Scale );
 }
 
 static bool DrawSwatches( float Left, float Top, float Wide, int Count, const CColor* Colors, int& Pick, const char* Prefix, const CVector& Point, bool Click, float Scale ) {
@@ -1726,12 +1706,7 @@ static float AimRadius( float Scale, float Fov ) {
         Wide = ( float )ur::app::width( );
     if ( Tall < 64.0f )
         Tall = ( float )ur::app::height( );
-    float Half = sqrtf( Wide * Wide + Tall * Tall ) * 0.5f;
-    if ( Scale <= 0.0f )
-        Scale = 1.0f;
-    if ( Fov >= 359.0f )
-        return Half * Scale;
-    return Half * ( Fov / 360.0f ) * Scale;
+    return aim::ComputeAimRadius( Wide, Tall, Scale, Fov );
 }
 
 static world::Vec3 SilentBone( const world::Actor& Item ) {

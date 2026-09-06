@@ -103,6 +103,7 @@ add_executable( UnlinkedTests
     tests/test_aim.cpp
     tests/test_world_visibility.cpp
     tests/test_key_labels.cpp
+    tests/test_layout.cpp
 )
 target_link_libraries( UnlinkedTests PRIVATE winhttp )
 target_include_directories( UnlinkedTests PRIVATE src tests )

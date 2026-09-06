@@ -146,4 +146,15 @@ inline float ScoreTarget( float ScreenDist, float FovLimit, float WorldDist, flo
     return Sn * 0.5f + Dn * 0.5f;
 }
 
+inline float ComputeAimRadius( float Wide, float Tall, float Scale, float Fov ) {
+    float Half = sqrtf( Wide * Wide + Tall * Tall ) * 0.5f;
+    if ( Scale <= 0.0f )
+        Scale = 1.0f;
+    if ( Fov >= 359.0f )
+        return Half * Scale;
+    if ( Fov < 0.0f )
+        Fov = 0.0f;
+    return Half * ( Fov / 360.0f ) * Scale;
+}
+
 }
