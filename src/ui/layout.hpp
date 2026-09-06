@@ -395,4 +395,91 @@ inline PageFit ComputePageFit( float Scale, bool DrawFov, bool LimitFps ) {
     return Fit;
 }
 
+inline float ComputeClampedScroll( float CurrentScroll, float WheelDelta, float ScrollStep, int ItemCount, float RowHeight, float ViewportHeight ) {
+    float Need = ( float )ItemCount * RowHeight;
+    float Most = Need - ViewportHeight;
+    if ( Most < 0.0f )
+        Most = 0.0f;
+    float Scroll = CurrentScroll - WheelDelta * ScrollStep;
+    if ( Scroll > Most )
+        Scroll = Most;
+    if ( Scroll < 0.0f )
+        Scroll = 0.0f;
+    return Scroll;
 }
+
+inline bool IsRowVisible( float RowTop, float RowHeight, float ViewportTop, float ViewportBottom ) {
+    return ( RowTop + RowHeight > ViewportTop ) && ( RowTop < ViewportBottom );
+}
+
+inline RectBounds ComputeTreeRowBounds( float PaneLeft, float PaneTop, float PaneWidth, int RowIndex, float RowHeight, float Scroll ) {
+    float Top = PaneTop + ( float )RowIndex * RowHeight - Scroll;
+    return RectBounds{ PaneLeft, Top, PaneWidth, RowHeight };
+}
+
+struct TreeItemElements {
+    RectBounds arm;
+    RectBounds mark;
+    RectBounds highlight;
+    float caretCenterX = 0.0f;
+    float caretCenterY = 0.0f;
+    float textX = 0.0f;
+    float textY = 0.0f;
+};
+
+inline TreeItemElements ComputeTreeItemElements( float PaneLeft, float PaneWidth, float LineTop, float RowH, int Depth, float Scale, float IconSize, float LineSpan ) {
+    TreeItemElements E;
+    float Indent = 12.0f * Scale;
+    float ArmLeft = PaneLeft + 4.0f * Scale + Indent * ( float )Depth;
+    float ArmWidth = 14.0f * Scale;
+    E.arm = RectBounds{ ArmLeft, LineTop, ArmWidth, RowH };
+    E.caretCenterX = ArmLeft + ArmWidth * 0.5f;
+    E.caretCenterY = LineTop + RowH * 0.5f;
+
+    float MarkLeft = ArmLeft + ArmWidth + 2.0f * Scale;
+    float MarkTop = LineTop + ( RowH - IconSize ) * 0.5f;
+    E.mark = RectBounds{ MarkLeft, MarkTop, IconSize, IconSize };
+
+    E.textX = MarkLeft + IconSize + 6.0f * Scale;
+    E.textY = LineTop + ( RowH - LineSpan ) * 0.5f;
+
+    E.highlight = RectBounds{ PaneLeft + 2.0f * Scale, LineTop + 1.0f * Scale, PaneWidth - 4.0f * Scale, RowH - 2.0f * Scale };
+    return E;
+}
+
+inline bool FormatTreeCaption( char* Out, size_t Cap, const char* Name, const char* Klass, int Extra, bool Open ) {
+    if ( !Out || Cap == 0 )
+        return false;
+    const char* SafeName = ( Name && Name[ 0 ] ) ? Name : "";
+    const char* SafeKlass = ( Klass && Klass[ 0 ] ) ? Klass : "";
+    if ( Extra > 0 && Open )
+        snprintf( Out, Cap, "%s [%s] +%d", SafeName, SafeKlass, Extra );
+    else
+        snprintf( Out, Cap, "%s [%s]", SafeName, SafeKlass );
+    return true;
+}
+
+struct ExplorerLayout {
+    RectBounds search;
+    RectBounds treePane;
+    RectBounds sidePane;
+};
+
+inline ExplorerLayout ComputeExplorerLayout( float BodyLeft, float BodyTop, float BodyWidth, float BodyHeight, float Scale ) {
+    ExplorerLayout L;
+    float SearchH = 28.0f * Scale;
+    L.search = RectBounds{ BodyLeft, BodyTop, BodyWidth, SearchH };
+
+    float Gap = 8.0f * Scale;
+    float TreeW = BodyWidth * 0.56f;
+    float SideW = BodyWidth - TreeW - Gap;
+    float WorkTop = BodyTop + SearchH + 6.0f * Scale;
+    float WorkH = ( BodyTop + BodyHeight ) - WorkTop;
+
+    L.treePane = RectBounds{ BodyLeft, WorkTop, TreeW, WorkH };
+    L.sidePane = RectBounds{ BodyLeft + TreeW + Gap, WorkTop, SideW, WorkH };
+    return L;
+}
+
+}
+

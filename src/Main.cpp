@@ -1191,7 +1191,6 @@ static int WalkLive( uintptr_t Parent, int Depth, float Scale, const CRectangle&
     }
     int Shown = 0;
     float RowH = 24.0f * Scale;
-    float Indent = 12.0f * Scale;
     float Icon = 15.0f * Scale;
     for ( int Index = 0; Index < Count; Index++ ) {
         uintptr_t Addr = List[ Index ];
@@ -1201,13 +1200,14 @@ static int WalkLive( uintptr_t Parent, int Depth, float Scale, const CRectangle&
         if ( !Item )
             continue;
         Shown += 1;
-        float Top = Pane.Top + ( float )Row * RowH - Tree.scroll;
-        CRectangle Line( Pane.Left, Top, Pane.Width, RowH );
-        bool See = Top + RowH > Pane.Top && Top < Pane.Bottom( );
+        ui::RectBounds LineB = ui::ComputeTreeRowBounds( Pane.Left, Pane.Top, Pane.Width, Row, RowH, Tree.scroll );
+        CRectangle Line( LineB.left, LineB.top, LineB.width, LineB.height );
+        bool See = ui::IsRowVisible( LineB.top, RowH, Pane.Top, Pane.Bottom( ) );
         bool Kids = browse::HasKids( Addr );
         if ( Paint && See ) {
             bool Over = Line.Contains( Point ) && Pane.Contains( Point ) && !Locked && !Tree.type;
-            CRectangle Arm( Pane.Left + 4.0f * Scale + Indent * ( float )Depth, Line.Top, 14.0f * Scale, RowH );
+            ui::TreeItemElements E = ui::ComputeTreeItemElements( Pane.Left, Pane.Width, Line.Top, RowH, Depth, Scale, Icon, Font->LineSpan );
+            CRectangle Arm( E.arm.left, E.arm.top, E.arm.width, E.arm.height );
             if ( Over && Click ) {
                 if ( Kids && Arm.Contains( Point ) )
                     browse::Toggle( Addr );
@@ -1218,22 +1218,19 @@ static int WalkLive( uintptr_t Parent, int Depth, float Scale, const CRectangle&
                 }
             }
             if ( Tree.pick == Addr )
-                Canvas->Rectangle( CRectangle( Pane.Left + 2.0f * Scale, Line.Top + 1.0f * Scale, Pane.Width - 4.0f * Scale, RowH - 2.0f * Scale ), Dress.trackOn, 4.0f * Scale );
+                Canvas->Rectangle( CRectangle( E.highlight.left, E.highlight.top, E.highlight.width, E.highlight.height ), Dress.trackOn, 4.0f * Scale );
             else if ( Over )
-                Canvas->Rectangle( CRectangle( Pane.Left + 2.0f * Scale, Line.Top + 1.0f * Scale, Pane.Width - 4.0f * Scale, RowH - 2.0f * Scale ), CColor( 255, 255, 255, 14 ), 4.0f * Scale );
+                Canvas->Rectangle( CRectangle( E.highlight.left, E.highlight.top, E.highlight.width, E.highlight.height ), CColor( 255, 255, 255, 14 ), 4.0f * Scale );
             if ( Kids )
-                DrawCaret( CVector( Arm.Left + Arm.Width * 0.5f, Line.Top + RowH * 0.5f ), Item->open, Scale, Mix( CColor( 168, 178, 194 ), CColor( 230, 236, 246 ), Tree.pick == Addr ? 1.0f : 0.0f ) );
+                DrawCaret( CVector( E.caretCenterX, E.caretCenterY ), Item->open, Scale, Mix( CColor( 168, 178, 194 ), CColor( 230, 236, 246 ), Tree.pick == Addr ? 1.0f : 0.0f ) );
             unsigned long long Glyph = TreeGlyph( browse::Glyph( Addr ) );
-            CRectangle Mark( Arm.Right( ) + 2.0f * Scale, Line.Top + ( RowH - Icon ) * 0.5f, Icon, Icon );
+            CRectangle Mark( E.mark.left, E.mark.top, E.mark.width, E.mark.height );
             if ( Glyph )
                 Canvas->Image( Mark, Glyph, CRectangle( 0.0f, 0.0f, 1.0f, 1.0f ), CColor( 255, 255, 255 ), 0.0f );
             char Caption[ 96 ];
-            if ( Item->extra > 0 && Item->open )
-                snprintf( Caption, sizeof( Caption ), "%s [%s] +%d", Item->name, Item->klass, Item->extra );
-            else
-                snprintf( Caption, sizeof( Caption ), "%s [%s]", Item->name, Item->klass );
+            ui::FormatTreeCaption( Caption, sizeof( Caption ), Item->name, Item->klass, Item->extra, Item->open );
             CColor Ink = Tree.pick == Addr ? CColor( 240, 246, 255 ) : Style->Text;
-            Canvas->Text( CVector( Mark.Right( ) + 6.0f * Scale, Line.Top + ( RowH - Font->LineSpan ) * 0.5f ), Ink, Caption );
+            Canvas->Text( CVector( E.textX, E.textY ), Ink, Caption );
             Busy = Busy || Over;
         }
         Row += 1;
@@ -1255,15 +1252,10 @@ static bool DrawExplorer( float Across, float Vertical, const CVector& Point, bo
     CRectangle Body;
     ExploreChrome( Bounds, Scale, Header, Body );
 
-    float SearchH = 28.0f * Scale;
-    CRectangle Search( Body.Left, Body.Top, Body.Width, SearchH );
-    float Gap = 8.0f * Scale;
-    float TreeW = Body.Width * 0.56f;
-    float SideW = Body.Width - TreeW - Gap;
-    float WorkTop = Search.Bottom( ) + 6.0f * Scale;
-    float WorkH = Body.Bottom( ) - WorkTop;
-    CRectangle Pane( Body.Left, WorkTop, TreeW, WorkH );
-    CRectangle Side( Body.Left + TreeW + Gap, WorkTop, SideW, WorkH );
+    ui::ExplorerLayout L = ui::ComputeExplorerLayout( Body.Left, Body.Top, Body.Width, Body.Height, Scale );
+    CRectangle Search( L.search.left, L.search.top, L.search.width, L.search.height );
+    CRectangle Pane( L.treePane.left, L.treePane.top, L.treePane.width, L.treePane.height );
+    CRectangle Side( L.sidePane.left, L.sidePane.top, L.sidePane.width, L.sidePane.height );
 
     bool OverTree = Pane.Contains( Point );
     bool OverSide = Side.Contains( Point );
@@ -1275,18 +1267,10 @@ static bool DrawExplorer( float Across, float Vertical, const CVector& Point, bo
     if ( Root )
         Count = WalkLive( 0, 0, Scale, Pane, Point, false, true, Count, false, Busy );
     float RowH = 24.0f * Scale;
-    float Need = ( float )Count * RowH;
-    float Most = Need - Pane.Height;
-    if ( Most < 0.0f )
-        Most = 0.0f;
-    if ( OverTree && !Locked && !Tree.type && Input->WheelDelta != 0.0f ) {
-        Tree.scroll -= Input->WheelDelta * 42.0f * Scale;
+    float TreeDelta = ( OverTree && !Locked && !Tree.type ) ? Input->WheelDelta : 0.0f;
+    if ( TreeDelta != 0.0f )
         Input->WheelDelta = 0.0f;
-    }
-    if ( Tree.scroll > Most )
-        Tree.scroll = Most;
-    if ( Tree.scroll < 0.0f )
-        Tree.scroll = 0.0f;
+    Tree.scroll = ui::ComputeClampedScroll( Tree.scroll, TreeDelta, 42.0f * Scale, Count, RowH, Pane.Height );
 
     Canvas->Shadow( Bounds, CColor( 6, 10, 18, 130 ), Round, 24.0f * Scale );
     Canvas->Rectangle( Bounds, Style->Surface, Round );
@@ -1303,10 +1287,10 @@ static bool DrawExplorer( float Across, float Vertical, const CVector& Point, bo
         DrawIce( Search, Search, 8.0f * Scale, 0.45f );
     Canvas->Border( Search, Mix( Dress.foldLine, Style->AccentSoft, Tree.type ? 1.0f : 0.0f ), 8.0f * Scale, 1.0f );
     const char* Shown = Tree.find[ 0 ] ? Tree.find : ( Tree.type ? "" : "Search name or class" );
-    Canvas->Text( CVector( Search.Left + 10.0f * Scale, Search.Top + ( SearchH - Font->LineSpan ) * 0.5f ), Tree.find[ 0 ] ? Style->Text : Style->Faint, Shown );
+    Canvas->Text( CVector( Search.Left + 10.0f * Scale, Search.Top + ( Search.Height - Font->LineSpan ) * 0.5f ), Tree.find[ 0 ] ? Style->Text : Style->Faint, Shown );
     if ( Tree.type && ( ( int )( Context->Elapsed * 2.0 ) & 1 ) ) {
         CVector Caret = Font->Measure( Tree.find );
-        Canvas->Rectangle( CRectangle( Search.Left + 10.0f * Scale + Caret.Horizontal, Search.Top + 6.0f * Scale, 1.0f * Scale, SearchH - 12.0f * Scale ), Style->AccentSoft, 0.0f );
+        Canvas->Rectangle( CRectangle( Search.Left + 10.0f * Scale + Caret.Horizontal, Search.Top + 6.0f * Scale, 1.0f * Scale, Search.Height - 12.0f * Scale ), Style->AccentSoft, 0.0f );
     }
 
     Canvas->Rectangle( Pane, Style->Elevated, 10.0f * Scale );
@@ -1371,24 +1355,16 @@ static bool DrawExplorer( float Across, float Vertical, const CVector& Point, bo
         PropPane.Height = 20.0f * Scale;
     float PropH = 18.0f * Scale;
     int PropN = browse::Core( ).propN;
-    if ( OverSide && !OverTree && Input->WheelDelta != 0.0f ) {
-        Tree.propScroll -= Input->WheelDelta * 28.0f * Scale;
+    float PropDelta = ( OverSide && !OverTree ) ? Input->WheelDelta : 0.0f;
+    if ( PropDelta != 0.0f )
         Input->WheelDelta = 0.0f;
-    }
-    float PropNeed = ( float )PropN * PropH;
-    float PropMost = PropNeed - PropPane.Height;
-    if ( PropMost < 0.0f )
-        PropMost = 0.0f;
-    if ( Tree.propScroll > PropMost )
-        Tree.propScroll = PropMost;
-    if ( Tree.propScroll < 0.0f )
-        Tree.propScroll = 0.0f;
+    Tree.propScroll = ui::ComputeClampedScroll( Tree.propScroll, PropDelta, 28.0f * Scale, PropN, PropH, PropPane.Height );
     Canvas->PushClip( PropPane );
     for ( int Index = 0; Index < PropN; Index++ ) {
         const browse::Prop& Item = browse::Core( ).props[ Index ];
         float Top = PropPane.Top + ( float )Index * PropH - Tree.propScroll;
         CRectangle Line( PropPane.Left, Top, PropPane.Width, PropH );
-        if ( Top + PropH < PropPane.Top || Top > PropPane.Bottom( ) )
+        if ( !ui::IsRowVisible( Top, PropH, PropPane.Top, PropPane.Bottom( ) ) )
             continue;
         Canvas->Text( CVector( Line.Left, Line.Top + 1.0f * Scale ), Style->Faint, Item.label );
         CVector Size = Font->Measure( Item.text );

@@ -628,4 +628,117 @@ TEST_CASE( "Layout: ComputePageFit dynamic height adjustment with options" ) {
     CHECK_CLOSE( ScaledFit.inset, 15.0f, 0.001f );
 }
 
+TEST_CASE( "Layout: ComputeClampedScroll clamping and wheel delta" ) {
+    // 30 items * 20px = 600px, Viewport = 400px -> Most = 200px
+    // Scroll down (WheelDelta = -1, Step = 42)
+    float S1 = ui::ComputeClampedScroll( 0.0f, -1.0f, 42.0f, 30, 20.0f, 400.0f );
+    CHECK_CLOSE( S1, 42.0f, 0.001f );
+
+    // Clamp to max bounds (Most = 200)
+    float S2 = ui::ComputeClampedScroll( 190.0f, -1.0f, 42.0f, 30, 20.0f, 400.0f );
+    CHECK_CLOSE( S2, 200.0f, 0.001f );
+
+    // Scroll up (WheelDelta = 1, Step = 42) clamped to 0
+    float S3 = ui::ComputeClampedScroll( 20.0f, 1.0f, 42.0f, 30, 20.0f, 400.0f );
+    CHECK_CLOSE( S3, 0.0f, 0.001f );
+
+    // Content fits in viewport (10 items * 20px = 200px < 400px -> Most = 0)
+    float S4 = ui::ComputeClampedScroll( 0.0f, -5.0f, 42.0f, 10, 20.0f, 400.0f );
+    CHECK_CLOSE( S4, 0.0f, 0.001f );
+}
+
+TEST_CASE( "Layout: IsRowVisible viewport culling" ) {
+    float VTop = 100.0f;
+    float VBottom = 500.0f;
+    float RowH = 24.0f;
+
+    // Above viewport
+    CHECK( !ui::IsRowVisible( 50.0f, RowH, VTop, VBottom ) );
+
+    // Partially visible at top edge
+    CHECK( ui::IsRowVisible( 90.0f, RowH, VTop, VBottom ) );
+
+    // Fully inside viewport
+    CHECK( ui::IsRowVisible( 250.0f, RowH, VTop, VBottom ) );
+
+    // Partially visible at bottom edge
+    CHECK( ui::IsRowVisible( 490.0f, RowH, VTop, VBottom ) );
+
+    // Below viewport
+    CHECK( !ui::IsRowVisible( 510.0f, RowH, VTop, VBottom ) );
+}
+
+TEST_CASE( "Layout: ComputeTreeRowBounds and ComputeTreeItemElements indentation" ) {
+    ui::RectBounds RowB = ui::ComputeTreeRowBounds( 10.0f, 50.0f, 300.0f, 2, 24.0f, 10.0f );
+    CHECK_CLOSE( RowB.left, 10.0f, 0.001f );
+    CHECK_CLOSE( RowB.top, 88.0f, 0.001f ); // 50 + 2 * 24 - 10 = 88
+    CHECK_CLOSE( RowB.width, 300.0f, 0.001f );
+    CHECK_CLOSE( RowB.height, 24.0f, 0.001f );
+
+    // Depth = 0 (Root or top-level item)
+    ui::TreeItemElements E0 = ui::ComputeTreeItemElements( 10.0f, 300.0f, 88.0f, 24.0f, 0, 1.0f, 15.0f, 16.0f );
+    CHECK_CLOSE( E0.arm.left, 14.0f, 0.001f ); // 10 + 4
+    CHECK_CLOSE( E0.arm.top, 88.0f, 0.001f );
+    CHECK_CLOSE( E0.arm.width, 14.0f, 0.001f );
+    CHECK_CLOSE( E0.caretCenterX, 21.0f, 0.001f ); // 14 + 7
+    CHECK_CLOSE( E0.caretCenterY, 100.0f, 0.001f );  // 88 + 12
+    CHECK_CLOSE( E0.mark.left, 30.0f, 0.001f ); // 14 + 14 + 2
+    CHECK_CLOSE( E0.mark.top, 92.5f, 0.001f );  // 88 + (24 - 15) * 0.5
+    CHECK_CLOSE( E0.textX, 51.0f, 0.001f );     // 30 + 15 + 6
+    CHECK_CLOSE( E0.textY, 92.0f, 0.001f );     // 88 + (24 - 16) * 0.5
+    CHECK_CLOSE( E0.highlight.left, 12.0f, 0.001f );
+    CHECK_CLOSE( E0.highlight.width, 296.0f, 0.001f );
+
+    // Depth = 2 (Nested item)
+    ui::TreeItemElements E2 = ui::ComputeTreeItemElements( 10.0f, 300.0f, 88.0f, 24.0f, 2, 1.0f, 15.0f, 16.0f );
+    CHECK_CLOSE( E2.arm.left, 38.0f, 0.001f ); // 10 + 4 + 12 * 2 = 38
+}
+
+TEST_CASE( "Layout: FormatTreeCaption formatting and extra count" ) {
+    char Out[ 96 ] = { };
+
+    // Standard item
+    CHECK( ui::FormatTreeCaption( Out, sizeof( Out ), "Workspace", "Folder", 0, false ) );
+    CHECK_EQ( std::string( Out ), "Workspace [Folder]" );
+
+    // Closed item with extra count does not append +N
+    CHECK( ui::FormatTreeCaption( Out, sizeof( Out ), "Players", "Folder", 5, false ) );
+    CHECK_EQ( std::string( Out ), "Players [Folder]" );
+
+    // Open item with extra count appends +N
+    CHECK( ui::FormatTreeCaption( Out, sizeof( Out ), "Players", "Folder", 5, true ) );
+    CHECK_EQ( std::string( Out ), "Players [Folder] +5" );
+
+    // Nullptr safety
+    CHECK( ui::FormatTreeCaption( Out, sizeof( Out ), nullptr, nullptr, 0, false ) );
+    CHECK_EQ( std::string( Out ), " []" );
+
+    // Buffer validation
+    CHECK( !ui::FormatTreeCaption( nullptr, sizeof( Out ), "Item", "Class", 0, false ) );
+    CHECK( !ui::FormatTreeCaption( Out, 0, "Item", "Class", 0, false ) );
+}
+
+TEST_CASE( "Layout: ComputeExplorerLayout panel partitioning" ) {
+    ui::ExplorerLayout L = ui::ComputeExplorerLayout( 50.0f, 60.0f, 600.0f, 400.0f, 1.0f );
+
+    // Search bar: Left 50, Top 60, Width 600, Height 28
+    CHECK_CLOSE( L.search.left, 50.0f, 0.001f );
+    CHECK_CLOSE( L.search.top, 60.0f, 0.001f );
+    CHECK_CLOSE( L.search.width, 600.0f, 0.001f );
+    CHECK_CLOSE( L.search.height, 28.0f, 0.001f );
+
+    // Tree width: 600 * 0.56 = 336
+    CHECK_CLOSE( L.treePane.left, 50.0f, 0.001f );
+    CHECK_CLOSE( L.treePane.top, 94.0f, 0.001f ); // 60 + 28 + 6 = 94
+    CHECK_CLOSE( L.treePane.width, 336.0f, 0.001f );
+    CHECK_CLOSE( L.treePane.height, 366.0f, 0.001f ); // (60 + 400) - 94 = 366
+
+    // Side width: 600 - 336 - 8 = 256
+    CHECK_CLOSE( L.sidePane.left, 394.0f, 0.001f ); // 50 + 336 + 8 = 394
+    CHECK_CLOSE( L.sidePane.top, 94.0f, 0.001f );
+    CHECK_CLOSE( L.sidePane.width, 256.0f, 0.001f );
+    CHECK_CLOSE( L.sidePane.height, 366.0f, 0.001f );
+}
+
+
 
