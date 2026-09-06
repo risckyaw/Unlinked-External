@@ -28,6 +28,18 @@ if( MSVC )
     target_compile_options( Unlinked PRIVATE /W4 /utf-8 /EHsc )
 endif( )
 
+target_precompile_headers( Unlinked PRIVATE
+    <Windows.h>
+    <cmath>
+    <cstdint>
+    <cstdio>
+    <cstring>
+    <string>
+    <vector>
+    <memory>
+    <chrono>
+)
+
 set_target_properties( Unlinked PROPERTIES
     VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
@@ -90,6 +102,17 @@ target_include_directories( UnlinkedTests PRIVATE src tests )
 if( MSVC )
     target_compile_options( UnlinkedTests PRIVATE /W4 /utf-8 /EHsc )
 endif( )
+
+target_precompile_headers( UnlinkedTests PRIVATE
+    <cmath>
+    <cstdint>
+    <cstdio>
+    <cstdlib>
+    <cstring>
+    <string>
+    <vector>
+    <Windows.h>
+)
 
 add_test( NAME UnlinkedTests COMMAND UnlinkedTests )
 
