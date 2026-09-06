@@ -89,3 +89,66 @@ TEST_CASE( "Store: TakeB boolean parsing" ) {
     CHECK_EQ( store::TakeB( Config, "aim.vis", Vis ), true );
     CHECK_EQ( Vis, false );
 }
+
+TEST_CASE( "Store: File lifecycle and CustomRoot integration" ) {
+    char TempPath[ MAX_PATH ] = { };
+    GetTempPathA( MAX_PATH, TempPath );
+    char TestDir[ MAX_PATH ] = { };
+    snprintf( TestDir, sizeof( TestDir ), "%sunlinked_store_test_%lu", TempPath, GetCurrentProcessId( ) );
+    CreateDirectoryA( TestDir, nullptr );
+
+    store::SetCustomRoot( TestDir );
+
+    // 1. Write configs
+    const char* BodyAlpha = "aim.on 1\naim.fov 90.0\n";
+    const char* BodyBeta = "aim.on 0\nesp.range 250\n";
+    CHECK( store::Write( "config_alpha", BodyAlpha ) );
+    CHECK( store::Write( "config_beta", BodyBeta ) );
+
+    // Invalid config names should fail
+    CHECK( !store::Write( "invalid/slash", BodyAlpha ) );
+    CHECK( !store::Write( "", BodyAlpha ) );
+
+    // 2. Read configs
+    char ReadBuf[ 256 ] = { };
+    CHECK( store::Read( "config_alpha", ReadBuf, ( int )sizeof( ReadBuf ) ) );
+    int AimOn = 0;
+    float AimFov = 0.0f;
+    CHECK( store::Take( ReadBuf, "aim.on", AimOn ) );
+    CHECK_EQ( AimOn, 1 );
+    CHECK( store::TakeF( ReadBuf, "aim.fov", AimFov ) );
+    CHECK_CLOSE( AimFov, 90.0f, 0.01f );
+
+    // Non-existent config
+    char MissingBuf[ 64 ] = { };
+    CHECK( !store::Read( "does_not_exist", MissingBuf, ( int )sizeof( MissingBuf ) ) );
+
+    // 3. List configs (must be alphabetically sorted)
+    char Names[ store::SlotMax ][ store::NameCap ] = { };
+    int Count = store::List( Names );
+    CHECK( Count >= 2 );
+    CHECK_EQ( std::string( Names[ 0 ] ), "config_alpha" );
+    CHECK_EQ( std::string( Names[ 1 ] ), "config_beta" );
+
+    // 4. Current & SetCurrent
+    CHECK( store::SetCurrent( "config_alpha" ) );
+    char CurrName[ store::NameCap ] = { };
+    CHECK( store::Current( CurrName, ( int )sizeof( CurrName ) ) );
+    CHECK_EQ( std::string( CurrName ), "config_alpha" );
+
+    // 5. Remove config
+    CHECK( store::Remove( "config_alpha" ) );
+    CHECK( !store::Read( "config_alpha", ReadBuf, ( int )sizeof( ReadBuf ) ) );
+    CHECK( !store::Remove( "config_alpha" ) ); // Already removed
+
+    // Clean up files and directory
+    store::Remove( "config_beta" );
+    char CurrentFile[ MAX_PATH ];
+    store::ActivePath( CurrentFile, MAX_PATH );
+    DeleteFileA( CurrentFile );
+    RemoveDirectoryA( TestDir );
+
+    // Reset CustomRoot back to nullptr
+    store::SetCustomRoot( nullptr );
+}
+

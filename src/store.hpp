@@ -50,7 +50,21 @@ inline bool Valid( const char* Name ) {
     return true;
 }
 
+inline const char*& CustomRoot( ) {
+    static const char* Path = nullptr;
+    return Path;
+}
+
+inline void SetCustomRoot( const char* Path ) {
+    CustomRoot( ) = Path;
+}
+
 inline bool Root( char* Out, int Cap ) {
+    if ( CustomRoot( ) ) {
+        snprintf( Out, Cap, "%s", CustomRoot( ) );
+        CreateDirectoryA( Out, nullptr );
+        return true;
+    }
     char App[ MAX_PATH ] = { };
     if ( FAILED( SHGetFolderPathA( nullptr, CSIDL_APPDATA, nullptr, SHGFP_TYPE_CURRENT, App ) ) )
         return false;
@@ -114,11 +128,15 @@ inline int List( char Names[ SlotMax ][ NameCap ] ) {
     do {
         if ( Data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY )
             continue;
+        size_t FileLen = strlen( Data.cFileName );
+        if ( FileLen < 5 || _stricmp( Data.cFileName + FileLen - 4, ".cfg" ) != 0 )
+            continue;
         char Stem[ NameCap ] = { };
-        lstrcpynA( Stem, Data.cFileName, NameCap );
-        char* Dot = strstr( Stem, ".cfg" );
-        if ( Dot )
-            *Dot = 0;
+        size_t BaseLen = FileLen - 4;
+        if ( BaseLen >= ( size_t )NameCap )
+            BaseLen = ( size_t )( NameCap - 1 );
+        memcpy( Stem, Data.cFileName, BaseLen );
+        Stem[ BaseLen ] = 0;
         Sanitize( Stem );
         if ( !Valid( Stem ) || Count >= SlotMax )
             continue;
