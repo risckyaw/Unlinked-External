@@ -1691,7 +1691,8 @@ static void DrawFovRings( float Scale ) {
         float Ring = ur::motion::toward( "aim.fov.ring", 1.0f, 18.0f );
         float Radius = AimRadius( Scale, Aim.fov );
         Canvas->Opacity = Keep * Ring * Pulse;
-        Canvas->Border( CRectangle( Mid.Horizontal - Radius, Mid.Vertical - Radius, Radius * 2.0f, Radius * 2.0f ), Mix( Style->Accent, Style->AccentSoft, 0.3f ), Radius, 1.6f * Scale );
+        ui::RectBounds RingB = ui::ComputeCircleBounds( Mid.Horizontal, Mid.Vertical, Radius );
+        Canvas->Border( CRectangle( RingB.left, RingB.top, RingB.width, RingB.height ), Mix( Style->Accent, Style->AccentSoft, 0.3f ), Radius, 1.6f * Scale );
     }
     Canvas->Opacity = Keep;
 }
@@ -1738,13 +1739,12 @@ static void DrawEspWorld( float Scale ) {
     Canvas->Opacity = 1.0f;
     CColor Edge = CColor( 8, 10, 14, 210 );
     float Thick = 1.5f * Scale;
-    CVector Foot( ( float )ur::app::width( ) * 0.5f, ( float )ur::app::height( ) - 4.0f * Scale );
+    CVector Foot;
+    esp::ComputeSnaplineOrigin( ( float )ur::app::width( ), ( float )ur::app::height( ), Scale, Foot.Horizontal, Foot.Vertical );
 
     for ( int Index = 0; Index < Snap.count; Index++ ) {
         const world::Actor& Item = Snap.list[ Index ];
-        if ( Item.dist > Esp.range )
-            continue;
-        if ( Esp.team && Item.mate )
+        if ( !esp::ShouldRenderActor( Item.dist, Esp.range, Esp.team, Item.mate ) )
             continue;
         CVector Dots[ world::BoneMax ];
         bool On[ world::BoneMax ] = { };
@@ -1756,10 +1756,7 @@ static void DrawEspWorld( float Scale ) {
             BBox.Push( At.Horizontal, At.Vertical );
         };
         auto PushOff = [ & ]( world::Vec3 Point, float Side, float Lift ) {
-            Point.x += Snap.right.x * Side;
-            Point.y += Lift;
-            Point.z += Snap.right.z * Side;
-            Push( Point );
+            Push( esp::ComputeOffsetPoint( Point, Snap.right, Side, Lift ) );
         };
         Push( Item.head );
         Push( Item.low );
@@ -1841,11 +1838,7 @@ static void DrawExploreMark( float Scale ) {
     if ( !Part || !world::PartPos( Part, Pos ) )
         return;
     world::Vec3 Size{ };
-    if ( !world::PartSize( Part, Size ) ) {
-        Size.x = 1.0f;
-        Size.y = 2.0f;
-        Size.z = 1.0f;
-    }
+    esp::ComputeDefaultPartSize( world::PartSize( Part, Size ), Size );
     world::Vec3 Hi{ }, Lo{ }, Right{ }, Left{ };
     esp::ComputePartExtents( Pos, Size, Hi, Lo, Right, Left );
     CVector A, B, C, D;

@@ -216,3 +216,69 @@ TEST_CASE( "ESP: ComputePartExtents 3D bounding point expansion" ) {
     CHECK_CLOSE( Left.x, 9.0f, 0.001f );
     CHECK_CLOSE( Left.z, 29.0f, 0.001f );
 }
+
+TEST_CASE( "ESP: ShouldRenderActor distance and teammate filtering" ) {
+    // Normal enemy in range -> render
+    CHECK( esp::ShouldRenderActor( 50.0f, 100.0f, false, false ) );
+    CHECK( esp::ShouldRenderActor( 50.0f, 100.0f, true, false ) );
+
+    // Enemy out of range -> do not render
+    CHECK( !esp::ShouldRenderActor( 150.0f, 100.0f, false, false ) );
+    CHECK( !esp::ShouldRenderActor( 150.0f, 100.0f, true, false ) );
+
+    // Teammate when team filter is ON -> do not render
+    CHECK( !esp::ShouldRenderActor( 50.0f, 100.0f, true, true ) );
+
+    // Teammate when team filter is OFF -> render
+    CHECK( esp::ShouldRenderActor( 50.0f, 100.0f, false, true ) );
+}
+
+TEST_CASE( "ESP: ComputeSnaplineOrigin viewport calculations" ) {
+    float X = 0.0f, Y = 0.0f;
+
+    // Standard 1080p, Scale 1.0f
+    esp::ComputeSnaplineOrigin( 1920.0f, 1080.0f, 1.0f, X, Y );
+    CHECK_CLOSE( X, 960.0f, 0.001f );
+    CHECK_CLOSE( Y, 1076.0f, 0.001f ); // 1080 - 4
+
+    // Scale 2.0f
+    esp::ComputeSnaplineOrigin( 1920.0f, 1080.0f, 2.0f, X, Y );
+    CHECK_CLOSE( X, 960.0f, 0.001f );
+    CHECK_CLOSE( Y, 1072.0f, 0.001f ); // 1080 - 8
+}
+
+TEST_CASE( "ESP: ComputeOffsetPoint 3D point expansion" ) {
+    struct SimpleVec { float x; float y; float z; };
+    SimpleVec Base{ 10.0f, 20.0f, 30.0f };
+    SimpleVec Right{ 1.0f, 0.0f, 0.0f };
+
+    SimpleVec Offset = esp::ComputeOffsetPoint( Base, Right, 2.0f, 1.5f );
+    CHECK_CLOSE( Offset.x, 12.0f, 0.001f );
+    CHECK_CLOSE( Offset.y, 21.5f, 0.001f );
+    CHECK_CLOSE( Offset.z, 30.0f, 0.001f );
+
+    // Diagonal right vector
+    SimpleVec DiagRight{ 0.7071f, 0.0f, 0.7071f };
+    SimpleVec DiagOffset = esp::ComputeOffsetPoint( Base, DiagRight, 1.0f, -0.5f );
+    CHECK_CLOSE( DiagOffset.x, 10.7071f, 0.001f );
+    CHECK_CLOSE( DiagOffset.y, 19.5f, 0.001f );
+    CHECK_CLOSE( DiagOffset.z, 30.7071f, 0.001f );
+}
+
+TEST_CASE( "ESP: ComputeDefaultPartSize fallback handling" ) {
+    struct SimpleVec { float x; float y; float z; };
+    SimpleVec Size{ 4.0f, 6.0f, 8.0f };
+
+    // Success = true preserves valid size
+    esp::ComputeDefaultPartSize( true, Size );
+    CHECK_CLOSE( Size.x, 4.0f, 0.001f );
+    CHECK_CLOSE( Size.y, 6.0f, 0.001f );
+    CHECK_CLOSE( Size.z, 8.0f, 0.001f );
+
+    // Success = false applies default extents {1.0f, 2.0f, 1.0f}
+    esp::ComputeDefaultPartSize( false, Size );
+    CHECK_CLOSE( Size.x, 1.0f, 0.001f );
+    CHECK_CLOSE( Size.y, 2.0f, 0.001f );
+    CHECK_CLOSE( Size.z, 1.0f, 0.001f );
+}
+

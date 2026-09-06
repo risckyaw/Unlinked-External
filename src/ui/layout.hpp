@@ -481,5 +481,9 @@ inline ExplorerLayout ComputeExplorerLayout( float BodyLeft, float BodyTop, floa
     return L;
 }
 
+inline RectBounds ComputeCircleBounds( float CenterX, float CenterY, float Radius ) {
+    return RectBounds{ CenterX - Radius, CenterY - Radius, Radius * 2.0f, Radius * 2.0f };
+}
+
 }
 

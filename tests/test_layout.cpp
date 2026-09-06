@@ -740,5 +740,21 @@ TEST_CASE( "Layout: ComputeExplorerLayout panel partitioning" ) {
     CHECK_CLOSE( L.sidePane.height, 366.0f, 0.001f );
 }
 
+TEST_CASE( "Layout: ComputeCircleBounds centered bounding box" ) {
+    ui::RectBounds C = ui::ComputeCircleBounds( 500.0f, 400.0f, 50.0f );
+    CHECK_CLOSE( C.left, 450.0f, 0.001f );
+    CHECK_CLOSE( C.top, 350.0f, 0.001f );
+    CHECK_CLOSE( C.width, 100.0f, 0.001f );
+    CHECK_CLOSE( C.height, 100.0f, 0.001f );
+
+    // Zero radius
+    ui::RectBounds Zero = ui::ComputeCircleBounds( 100.0f, 200.0f, 0.0f );
+    CHECK_CLOSE( Zero.left, 100.0f, 0.001f );
+    CHECK_CLOSE( Zero.top, 200.0f, 0.001f );
+    CHECK_CLOSE( Zero.width, 0.0f, 0.001f );
+    CHECK_CLOSE( Zero.height, 0.0f, 0.001f );
+}
+
+
 
 

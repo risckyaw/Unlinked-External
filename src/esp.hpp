@@ -218,4 +218,36 @@ inline void ComputePartExtents( const TVec3& Pos, const TVec3& Size,
     OutLeft.z -= Size.z * 0.5f;
 }
 
+inline bool ShouldRenderActor( float ItemDist, float MaxRange, bool TeamFilter, bool IsMate ) {
+    if ( ItemDist > MaxRange )
+        return false;
+    if ( TeamFilter && IsMate )
+        return false;
+    return true;
+}
+
+inline void ComputeSnaplineOrigin( float ViewportWidth, float ViewportHeight, float Scale, float& OutX, float& OutY ) {
+    OutX = ViewportWidth * 0.5f;
+    OutY = ViewportHeight - 4.0f * Scale;
+}
+
+template< typename TVec3 >
+inline TVec3 ComputeOffsetPoint( const TVec3& Base, const TVec3& Right, float Side, float Lift ) {
+    TVec3 Out = Base;
+    Out.x += Right.x * Side;
+    Out.y += Lift;
+    Out.z += Right.z * Side;
+    return Out;
+}
+
+template< typename TVec3 >
+inline void ComputeDefaultPartSize( bool Success, TVec3& Size ) {
+    if ( !Success ) {
+        Size.x = 1.0f;
+        Size.y = 2.0f;
+        Size.z = 1.0f;
+    }
+}
+
 } // namespace esp
+
